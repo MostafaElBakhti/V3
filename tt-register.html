@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><script type="text/javascript" src="/___vscode_livepreview_injected_script"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Register | Helpify</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background-color: #f5f8ff;
+      color: #1b2b5f;
+    }
+
+    .register-container {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .register-image {
+      flex: 1;
+      background: linear-gradient(to bottom right, #007bff, #00b4d8);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      padding: 40px 30px;
+      justify-content: center;
+      align-items: flex-start;
+      text-align: left;
+    }
+
+    .register-image .logo-img {
+      width: 80px;
+      margin-bottom: 30px;
+      align-self: flex-start;
+    }
+
+    .register-image .hero-content {
+      max-width: 340px;
+    }
+
+    .register-image .hero-content h2 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      margin-bottom: 15px;
+    }
+
+    .register-image .hero-content p {
+      font-size: 1rem;
+      font-weight: 500;
+      opacity: 0.92;
+      line-height: 1.6;
+    }
+
+    .register-form {
+      flex: 1.2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 60px 40px;
+      background-color: #fff;
+    }
+
+    form {
+      width: 100%;
+      max-width: 500px;
+      background: #ffffff;
+    }
+
+    form h2 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: 30px;
+      color: #1b2b5f;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 1rem;
+    }
+
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 12px 15px;
+      font-size: 1rem;
+      border: 1.5px solid #c9d8f0;
+      border-radius: 10px;
+      outline: none;
+      transition: border 0.3s;
+    }
+
+    .form-group input:focus, .form-group select:focus {
+      border-color: #007bff;
+    }
+
+    .form-group.terms {
+      display: flex;
+      align-items: center;
+      font-size: 0.95rem;
+    }
+
+    .form-group.terms input {
+      margin-right: 10px;
+    }
+
+    .form-group button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 14px 20px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border-radius: 12px;
+      cursor: pointer;
+      width: 100%;
+      transition: background-color 0.3s ease;
+    }
+
+    .form-group button:hover {
+      background-color: #0056cc;
+    }
+
+    .login-link {
+      margin-top: 15px;
+      font-size: 0.95rem;
+      text-align: center;
+    }
+
+    .login-link a {
+      color: #007bff;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    @media (max-width: 960px) {
+      .register-container {
+        flex-direction: column;
+      }
+
+      .register-image, .register-form {
+        flex: none;
+        width: 100%;
+      }
+
+      .register-image {
+        padding: 40px 25px;
+        align-items: center;
+        text-align: center;
+      }
+
+      .register-image .hero-content {
+        align-items: center;
+      }
+
+      .register-image .logo-img {
+        margin: 0 auto 25px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="register-container">
+
+    <!-- Left Side: Image & Promo Text -->
+    <div class="register-image">
+      <img src="logo.png" alt="Helpify Logo" class="logo-img" />
+      <div class="hero-content">
+        <h2>Be Part of the Helpify Community</h2>
+        <p>Whether you need a hand or you're ready to help, Helpify connects real people with real solutions. Join a growing community built on trust, speed, and support.</p>
+      </div>
+    </div>
+
+    <!-- Right Side: Form -->
+    <div class="register-form">
+      <form action="#">
+        <h2>Create Your Account</h2>
+
+        <div class="form-group">
+          <label for="role">I am a:</label>
+          <select id="role" name="role" required>
+            <option value="">Select...</option>
+            <option value="client">Client</option>
+            <option value="helper">Helper</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="fullname">Full Name</label>
+          <input type="text" id="fullname" name="fullname" required />
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" name="email" required />
+        </div>
+
+        <div class="form-group">
+          <label for="phone">Phone Number</label>
+          <input type="tel" id="phone" name="phone" required />
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required />
+        </div>
+
+        <div class="form-group">
+          <label for="confirm-password">Repeat Password</label>
+          <input type="password" id="confirm-password" name="confirm-password" required />
+        </div>
+
+        <div class="form-group terms">
+          <input type="checkbox" id="terms" required />
+          <label for="terms">I agree to the <a href="#">terms and conditions</a></label>
+        </div>
+
+        <div class="form-group">
+          <button type="submit">Register</button>
+        </div>
+
+        <div class="login-link">
+          Already have an account? <a href="#">Login</a>
+        </div>
+      </form>
+    </div>
+
+  </div>
+
+</body>
+</html>
