@@ -61,11 +61,30 @@ if (isLoggedIn()) {
   <title>Login | Helpify</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
   <style>
-    body {
+    :root {
+      --primary: #0F172A;
+      --primary-light: #1E293B;
+      --secondary: #0EA5E9;
+      --accent: #06B6D4;
+      --background: #F8FAFC;
+      --text-primary: #334155;
+      --text-secondary: #64748B;
+      --error: #EF4444;
+      --success: #10B981;
+    }
+
+    * {
       margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
       font-family: 'Poppins', sans-serif;
-      background-color: #f5f8ff;
-      color: #1b2b5f;
+      background-color: var(--background);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
     }
 
     .login-container {
@@ -75,7 +94,7 @@ if (isLoggedIn()) {
 
     .login-image {
       flex: 1;
-      background: linear-gradient(to bottom right, #007bff, #00b4d8);
+      background: linear-gradient(135deg, var(--secondary) 0%, var(--accent) 100%);
       color: white;
       display: flex;
       flex-direction: column;
@@ -83,6 +102,8 @@ if (isLoggedIn()) {
       justify-content: center;
       align-items: flex-start;
       text-align: left;
+      position: relative;
+      min-height: 100vh;
     }
 
     .login-image .logo-img {
@@ -95,24 +116,27 @@ if (isLoggedIn()) {
       justify-content: center;
       font-size: 24px;
       font-weight: 700;
-      color: #007bff;
+      color: var(--secondary);
       margin-bottom: 30px;
       align-self: flex-start;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     }
 
     .login-image .hero-content {
-      max-width: 340px;
+      max-width: 400px;
+      z-index: 2;
     }
 
     .login-image .hero-content h2 {
-      font-size: 2.2rem;
+      font-size: clamp(1.8rem, 4vw, 2.2rem);
       font-weight: 700;
       letter-spacing: 0.03em;
       margin-bottom: 15px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .login-image .hero-content p {
-      font-size: 1rem;
+      font-size: clamp(0.95rem, 2vw, 1rem);
       font-weight: 500;
       opacity: 0.92;
       line-height: 1.6;
@@ -125,19 +149,21 @@ if (isLoggedIn()) {
       align-items: center;
       padding: 60px 40px;
       background-color: #fff;
+      min-height: 100vh;
     }
 
-    form {
+    .form-wrapper {
       width: 100%;
       max-width: 500px;
       background: #ffffff;
     }
 
-    form h2 {
-      font-size: 2.5rem;
+    .form-wrapper h2 {
+      font-size: clamp(2rem, 4vw, 2.5rem);
       font-weight: 800;
       margin-bottom: 30px;
-      color: #1b2b5f;
+      color: var(--primary);
+      text-align: center;
     }
 
     .alert {
@@ -145,18 +171,19 @@ if (isLoggedIn()) {
       border-radius: 8px;
       margin-bottom: 20px;
       font-weight: 500;
+      font-size: 14px;
     }
 
     .alert-error {
       background-color: #fef2f2;
       border: 1px solid #fecaca;
-      color: #dc2626;
+      color: var(--error);
     }
 
     .alert-success {
       background-color: #f0fdf4;
       border: 1px solid #bbf7d0;
-      color: #16a34a;
+      color: var(--success);
     }
 
     .form-group {
@@ -167,54 +194,66 @@ if (isLoggedIn()) {
       display: block;
       font-weight: 600;
       margin-bottom: 8px;
-      font-size: 1rem;
+      font-size: clamp(0.95rem, 2vw, 1rem);
+      color: var(--text-primary);
     }
 
     .form-group input {
       width: 100%;
       padding: 12px 15px;
-      font-size: 1rem;
+      font-size: clamp(0.95rem, 2vw, 1rem);
       border: 1.5px solid #c9d8f0;
       border-radius: 10px;
       outline: none;
-      transition: border 0.3s;
+      transition: all 0.3s ease;
       box-sizing: border-box;
+      background-color: #fff;
     }
 
     .form-group input:focus {
-      border-color: #007bff;
+      border-color: var(--secondary);
+      box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
     }
 
     .form-group button {
-      background-color: #007bff;
+      background: linear-gradient(135deg, var(--secondary), var(--accent));
       color: white;
       border: none;
       padding: 14px 20px;
-      font-size: 1.1rem;
+      font-size: clamp(1rem, 2vw, 1.1rem);
       font-weight: 600;
       border-radius: 12px;
       cursor: pointer;
       width: 100%;
-      transition: background-color 0.3s ease;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);
     }
 
     .form-group button:hover {
-      background-color: #0056cc;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(14, 165, 233, 0.4);
+    }
+
+    .form-group button:active {
+      transform: translateY(0);
     }
 
     .register-link {
-      margin-top: 15px;
-      font-size: 0.95rem;
+      margin-top: 20px;
+      font-size: clamp(0.9rem, 2vw, 0.95rem);
       text-align: center;
+      color: var(--text-secondary);
     }
 
     .register-link a {
-      color: #007bff;
+      color: var(--secondary);
       text-decoration: none;
       font-weight: 600;
+      transition: color 0.3s ease;
     }
 
     .register-link a:hover {
+      color: var(--accent);
       text-decoration: underline;
     }
 
@@ -228,43 +267,263 @@ if (isLoggedIn()) {
       border-radius: 8px;
       text-decoration: none;
       font-weight: 500;
-      transition: background 0.3s;
+      transition: all 0.3s ease;
+      font-size: clamp(0.85rem, 2vw, 0.95rem);
+      backdrop-filter: blur(10px);
+      z-index: 10;
     }
 
     .back-home:hover {
       background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
     }
 
-    @media (max-width: 960px) {
+    /* Background decoration for left side */
+    .login-image::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="1.5" fill="rgba(255,255,255,0.08)"/><circle cx="40" cy="80" r="1" fill="rgba(255,255,255,0.06)"/><circle cx="90" cy="90" r="1.2" fill="rgba(255,255,255,0.07)"/><circle cx="10" cy="60" r="0.8" fill="rgba(255,255,255,0.05)"/></svg>') repeat;
+      pointer-events: none;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1024px) {
       .login-container {
         flex-direction: column;
       }
 
-      .login-image, .login-form {
-        flex: none;
-        width: 100%;
-      }
-
       .login-image {
-        padding: 40px 25px;
+        flex: none;
+        min-height: 40vh;
+        padding: 30px 25px;
         align-items: center;
         text-align: center;
-        position: relative;
+        justify-content: center;
       }
 
       .login-image .hero-content {
-        align-items: center;
+        max-width: 100%;
+        text-align: center;
       }
 
       .login-image .logo-img {
         margin: 0 auto 25px;
       }
 
+      .login-form {
+        flex: none;
+        min-height: 60vh;
+        padding: 40px 25px;
+      }
+
       .back-home {
-        position: absolute;
+        top: 15px;
+        left: 15px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .login-image {
+        min-height: 35vh;
+        padding: 25px 20px;
+      }
+
+      .login-form {
+        min-height: 65vh;
+        padding: 30px 20px;
+      }
+
+      .form-wrapper {
+        max-width: 100%;
+      }
+
+      .form-wrapper h2 {
+        margin-bottom: 25px;
+      }
+
+      .form-group {
+        margin-bottom: 18px;
+      }
+
+      .form-group input {
+        padding: 14px 15px;
+      }
+
+      .form-group button {
+        padding: 16px 20px;
+      }
+
+      .back-home {
         top: 10px;
         left: 10px;
+        padding: 6px 12px;
       }
+    }
+
+    @media (max-width: 480px) {
+      .login-image {
+        min-height: 30vh;
+        padding: 20px 15px;
+      }
+
+      .login-form {
+        padding: 25px 15px;
+        min-height: 70vh;
+      }
+
+      .form-wrapper h2 {
+        margin-bottom: 20px;
+      }
+
+      .form-group {
+        margin-bottom: 16px;
+      }
+
+      .form-group input, .form-group button {
+        padding: 12px 15px;
+      }
+
+      .alert {
+        padding: 10px 14px;
+        font-size: 13px;
+      }
+
+      .back-home {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        padding: 8px 12px;
+        font-size: 0.8rem;
+      }
+    }
+
+    @media (max-width: 360px) {
+      .login-image {
+        min-height: 25vh;
+        padding: 15px 10px;
+      }
+
+      .login-form {
+        padding: 20px 10px;
+        min-height: 75vh;
+      }
+
+      .form-wrapper {
+        padding: 0 5px;
+      }
+
+      .form-group input, .form-group button {
+        padding: 12px;
+      }
+
+      .login-image .hero-content h2 {
+        font-size: 1.5rem;
+      }
+
+      .login-image .hero-content p {
+        font-size: 0.9rem;
+      }
+    }
+
+    /* Landscape orientation fixes */
+    @media (max-height: 600px) and (orientation: landscape) {
+      .login-container {
+        flex-direction: row;
+      }
+
+      .login-image {
+        flex: 1;
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .login-form {
+        flex: 1.2;
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .login-image .hero-content h2 {
+        font-size: 1.6rem;
+        margin-bottom: 10px;
+      }
+
+      .login-image .hero-content p {
+        font-size: 0.9rem;
+      }
+
+      .form-wrapper h2 {
+        font-size: 1.8rem;
+        margin-bottom: 20px;
+      }
+
+      .form-group {
+        margin-bottom: 15px;
+      }
+    }
+
+    /* High DPI displays */
+    @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+      .login-image .logo-img {
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      }
+      
+      .form-group button {
+        box-shadow: 0 6px 20px rgba(14, 165, 233, 0.4);
+      }
+    }
+
+    /* Dark mode support */
+    @media (prefers-color-scheme: dark) {
+      .login-form {
+        background-color: #1a1a1a;
+      }
+      
+      .form-wrapper {
+        background: #1a1a1a;
+      }
+      
+      .form-group input {
+        background-color: #2a2a2a;
+        border-color: #444;
+        color: #fff;
+      }
+      
+      .form-wrapper h2 {
+        color: #fff;
+      }
+      
+      .form-group label {
+        color: #ddd;
+      }
+    }
+
+    /* Accessibility improvements */
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+
+    /* Focus indicators for keyboard navigation */
+    .form-group input:focus,
+    .form-group button:focus,
+    .back-home:focus,
+    .register-link a:focus {
+      outline: 2px solid var(--secondary);
+      outline-offset: 2px;
+    }
+
+    /* Loading state for button */
+    .form-group button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
     }
   </style>
 </head>
@@ -284,44 +543,126 @@ if (isLoggedIn()) {
 
     <!-- Right Side: Form -->
     <div class="login-form">
-      <form method="POST" action="login.php">
+      <div class="form-wrapper">
         <h2>Sign In</h2>
 
         <?php if (!empty($errors)): ?>
           <div class="alert alert-error">
             <?php foreach ($errors as $error): ?>
-              <div><?php echo $error; ?></div>
+              <div><?php echo htmlspecialchars($error); ?></div>
             <?php endforeach; ?>
           </div>
         <?php endif; ?>
 
         <?php if (!empty($success)): ?>
           <div class="alert alert-success">
-            <?php echo $success; ?>
+            <?php echo htmlspecialchars($success); ?>
           </div>
         <?php endif; ?>
 
-        <div class="form-group">
-          <label for="email">Email Address</label>
-          <input type="email" id="email" name="email" value="<?php echo sanitize($_POST['email'] ?? ''); ?>" required />
-        </div>
+        <form method="POST" action="login.php" novalidate>
+          <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" name="email" value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>" required autocomplete="email" />
+          </div>
 
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input type="password" id="password" name="password" required />
-        </div>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required autocomplete="current-password" />
+          </div>
 
-        <div class="form-group">
-          <button type="submit">Sign In</button>
-        </div>
+          <div class="form-group">
+            <button type="submit">Sign In</button>
+          </div>
+        </form>
 
         <div class="register-link">
           Don't have an account? <a href="register.php">Create one</a>
         </div>
-      </form>
+      </div>
     </div>
 
   </div>
+
+  <script>
+    // Form validation and UX improvements
+    document.addEventListener('DOMContentLoaded', function() {
+      const form = document.querySelector('form');
+      const emailInput = document.getElementById('email');
+      const passwordInput = document.getElementById('password');
+      const submitButton = document.querySelector('button[type="submit"]');
+
+      // Add real-time validation
+      emailInput.addEventListener('blur', function() {
+        const email = this.value.trim();
+        if (email && !isValidEmail(email)) {
+          this.style.borderColor = 'var(--error)';
+        } else {
+          this.style.borderColor = '';
+        }
+      });
+
+      // Email validation function
+      function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+      }
+
+      // Form submission handling
+      form.addEventListener('submit', function(e) {
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+
+        // Basic validation
+        if (!email || !password) {
+          e.preventDefault();
+          
+          if (!email) {
+            emailInput.focus();
+            emailInput.style.borderColor = 'var(--error)';
+          } else if (!password) {
+            passwordInput.focus();
+            passwordInput.style.borderColor = 'var(--error)';
+          }
+          return;
+        }
+
+        if (!isValidEmail(email)) {
+          e.preventDefault();
+          emailInput.focus();
+          emailInput.style.borderColor = 'var(--error)';
+          return;
+        }
+
+        // Show loading state
+        submitButton.textContent = 'Signing In...';
+        submitButton.disabled = true;
+      });
+
+      // Clear error styling on input
+      [emailInput, passwordInput].forEach(input => {
+        input.addEventListener('input', function() {
+          this.style.borderColor = '';
+        });
+      });
+
+      // Handle window resize for mobile layout
+      function handleResize() {
+        const vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+      }
+
+      window.addEventListener('resize', handleResize);
+      handleResize();
+
+      // Auto-focus first empty input
+      if (!emailInput.value) {
+        emailInput.focus();
+      } else if (!passwordInput.value) {
+        passwordInput.focus();
+      }
+    });
+  </script>
 
 </body>
 </html>

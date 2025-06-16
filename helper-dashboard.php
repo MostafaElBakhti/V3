@@ -144,15 +144,31 @@ if (isset($_GET['refresh']) && $_GET['refresh'] === 'tasks') {
         
         /* Sidebar */
         .sidebar {
-            width: 80px;
+            width: 240px;
             background: #1a1a1a;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            padding: 24px 16px;
+            align-items: flex-start;
+            padding: 24px;
             position: fixed;
             height: 100vh;
             z-index: 1000;
+            transition: width 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .sidebar.collapsed {
+            width: 80px;
+            align-items: center;
+            padding: 24px 16px;
+        }
+        
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 32px;
         }
         
         .logo {
@@ -163,24 +179,56 @@ if (isset($_GET['refresh']) && $_GET['refresh'] === 'tasks') {
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 32px;
             font-weight: 700;
             color: #1a1a1a;
             font-size: 18px;
+            flex-shrink: 0;
+        }
+        
+        .logo-text {
+            color: white;
+            font-size: 20px;
+            font-weight: 700;
+            margin-left: 16px;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+        
+        .sidebar.collapsed .logo-text {
+            opacity: 0;
+        }
+        
+        .sidebar-toggle {
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            opacity: 1;
+        }
+        
+        .sidebar-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
         }
         
         .nav-item {
-            width: 48px;
+            width: 100%;
             height: 48px;
             border-radius: 12px;
             display: flex;
             align-items: center;
-            justify-content: center;
             margin-bottom: 16px;
             color: #666;
             text-decoration: none;
             transition: all 0.2s;
             position: relative;
+            padding: 0 12px;
         }
         
         .nav-item:hover, .nav-item.active {
@@ -191,14 +239,33 @@ if (isset($_GET['refresh']) && $_GET['refresh'] === 'tasks') {
         .nav-item svg {
             width: 24px;
             height: 24px;
+            flex-shrink: 0;
+        }
+        
+        .nav-text {
+            margin-left: 16px;
+            font-size: 14px;
+            font-weight: 500;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+            white-space: nowrap;
+        }
+        
+        .sidebar.collapsed .nav-text {
+            opacity: 0;
         }
         
         /* Main Content */
         .main-content {
             flex: 1;
-            margin-left: 80px;
+            margin-left: 240px;
             padding: 32px;
             overflow-y: auto;
+            transition: margin-left 0.3s ease;
+        }
+        
+        .main-content.collapsed {
+            margin-left: 80px;
         }
         
         /* Header */
@@ -304,7 +371,7 @@ if (isset($_GET['refresh']) && $_GET['refresh'] === 'tasks') {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border-radius: 20px;
-            padding: 24px;
+            padding: 32px;
             margin-top: 32px;
         }
         
@@ -312,164 +379,220 @@ if (isset($_GET['refresh']) && $_GET['refresh'] === 'tasks') {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 24px;
+            margin-bottom: 32px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f1f5f9;
         }
         
         .tasks-title {
-            font-size: 24px;
-            font-weight: 600;
+            font-size: 28px;
+            font-weight: 700;
             color: #1a1a1a;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .title-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .refresh-btn {
-            background: #667eea;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
             color: white;
             border: none;
-            padding: 8px 16px;
-            border-radius: 8px;
+            padding: 12px 20px;
+            border-radius: 12px;
             cursor: pointer;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
         }
         
         .refresh-btn:hover {
-            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
         }
         
         .task-list {
             display: grid;
-            gap: 16px;
+            gap: 20px;
         }
         
         .task-card {
             background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            transition: transform 0.2s;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            border: 1px solid #f1f5f9;
         }
         
         .task-card:hover {
-            transform: translateY(-2px);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
         }
         
         .task-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 12px;
+            margin-bottom: 16px;
         }
         
         .task-title {
-            font-size: 18px;
+            font-size: 20px;
             font-weight: 600;
             color: #1a1a1a;
+            line-height: 1.3;
         }
         
         .task-status {
-            padding: 4px 12px;
+            padding: 6px 16px;
             border-radius: 20px;
             font-size: 12px;
-            font-weight: 500;
-            background: #dcfce7;
-            color: #166534;
+            font-weight: 600;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .task-description {
+            color: #64748b;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            font-size: 15px;
         }
         
         .task-details {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 16px;
-            margin-top: 16px;
+            margin-bottom: 20px;
+            padding: 16px;
+            background: #f8fafc;
+            border-radius: 12px;
         }
         
         .task-detail {
             display: flex;
             align-items: center;
-            gap: 8px;
-            color: #666;
+            gap: 10px;
+            color: #475569;
             font-size: 14px;
+            font-weight: 500;
         }
         
         .task-detail svg {
-            width: 16px;
-            height: 16px;
+            width: 18px;
+            height: 18px;
+            color: #3b82f6;
         }
         
         .task-actions {
             display: flex;
-            gap: 8px;
-            margin-top: 16px;
+            gap: 12px;
         }
         
         .task-btn {
-            padding: 8px 16px;
-            border-radius: 8px;
+            padding: 12px 20px;
+            border-radius: 10px;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
             border: none;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
         
         .task-btn-primary {
-            background: #4f46e5;
+            background: linear-gradient(135deg, #4f46e5, #3730a3);
             color: white;
         }
         
         .task-btn-secondary {
-            background: #10b981;
+            background: linear-gradient(135deg, #10b981, #059669);
             color: white;
         }
         
         .task-btn:hover {
-            opacity: 0.9;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
         
         .client-info {
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid #e5e7eb;
+            gap: 12px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
         }
         
         .client-avatar {
-            width: 32px;
-            height: 32px;
-            background: #f3f4f6;
-            border-radius: 8px;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 600;
-            color: #4b5563;
+            color: white;
         }
         
         .client-name {
             font-size: 14px;
-            color: #4b5563;
+            color: #475569;
+            font-weight: 500;
         }
         
         .no-tasks {
             text-align: center;
-            padding: 60px 20px;
-            background: #f8f9fa;
-            border-radius: 12px;
+            padding: 80px 20px;
+            background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+            border-radius: 16px;
+            border: 2px dashed #cbd5e1;
         }
         
         .no-tasks-icon {
-            font-size: 64px;
-            margin-bottom: 20px;
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
         }
         
         .debug-info {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 20px;
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            border: 1px solid #f59e0b;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 24px;
             font-size: 14px;
+        }
+        
+        @media (max-width: 1200px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
         
         @media (max-width: 768px) {
@@ -478,27 +601,386 @@ if (isset($_GET['refresh']) && $_GET['refresh'] === 'tasks') {
                 padding: 16px;
             }
             
-            .sidebar {
-                display: none;
+            .main-content.collapsed {
+                margin-left: 80px;
+            }
+            
+            .sidebar.collapsed {
+                width: 80px;
             }
             
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
+            
+            .task-details {
+                grid-template-columns: 1fr;
+            }
         }
+
+        .notification-bell {
+    position: relative;
+    cursor: pointer;
+}
+
+.notification-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #ef4444;
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+    animation: pulse 2s infinite;
+}
+
+.notification-badge.hidden {
+    display: none;
+}
+
+/* Notification Dropdown */
+.notification-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 380px;
+    max-height: 480px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e2e8f0;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+}
+
+.notification-dropdown.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.notification-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.notification-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.notification-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.notification-action-btn {
+    padding: 6px 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.notification-action-btn:hover {
+    background: #e2e8f0;
+}
+
+.notification-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.notification-item {
+    padding: 16px 24px;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.notification-item:hover {
+    background: #f8fafc;
+}
+
+.notification-item.unread {
+    background: #eff6ff;
+    border-left: 4px solid #3b82f6;
+}
+
+.notification-item.unread::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 8px;
+    height: 8px;
+    background: #3b82f6;
+    border-radius: 50%;
+}
+
+.notification-content {
+    display: flex;
+    gap: 12px;
+}
+
+.notification-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.notification-icon.application {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+}
+
+.notification-icon.message {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.notification-icon.task_status {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.notification-icon.review {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+}
+
+.notification-text {
+    flex: 1;
+}
+
+.notification-message {
+    font-size: 14px;
+    color: #1a1a1a;
+    line-height: 1.4;
+    margin-bottom: 4px;
+}
+
+.notification-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.notification-time {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.notification-delete {
+    background: none;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: all 0.2s;
+}
+
+.notification-item:hover .notification-delete {
+    opacity: 1;
+}
+
+.notification-delete:hover {
+    background: #fef2f2;
+    color: #ef4444;
+}
+
+.notification-empty {
+    padding: 40px 24px;
+    text-align: center;
+    color: #64748b;
+}
+
+.notification-empty-icon {
+    width: 48px;
+    height: 48px;
+    background: #f1f5f9;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+}
+
+.notification-footer {
+    padding: 16px 24px;
+    border-top: 1px solid #f1f5f9;
+    text-align: center;
+}
+
+.view-all-btn {
+    color: #3b82f6;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.view-all-btn:hover {
+    background: #eff6ff;
+}
+
+/* Toast Notifications */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    pointer-events: none;
+}
+
+.toast {
+    background: white;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border-left: 4px solid #3b82f6;
+    min-width: 300px;
+    max-width: 400px;
+    opacity: 0;
+    transform: translateX(400px);
+    transition: all 0.3s ease;
+    pointer-events: auto;
+    position: relative;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.toast.success {
+    border-left-color: #10b981;
+}
+
+.toast.error {
+    border-left-color: #ef4444;
+}
+
+.toast.warning {
+    border-left-color: #f59e0b;
+}
+
+.toast-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.toast-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.toast-text {
+    flex: 1;
+}
+
+.toast-title {
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 4px;
+    font-size: 14px;
+}
+
+.toast-message {
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.toast-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.toast-close:hover {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+/* Pulse animation for notification badge */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+@media (max-width: 768px) {
+    .notification-dropdown {
+        width: calc(100vw - 32px);
+        right: -100px;
+    }
+    
+    .toast-container {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+    }
+    
+    .toast {
+        min-width: auto;
+        max-width: none;
+    }
+}
     </style>
 </head>
 <body>
     <div class="dashboard-container">
         <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="logo">H</div>
+        <aside class="sidebar expanded" id="sidebar">
+            <div class="sidebar-header">
+                <div style="display: flex; align-items: center;">
+                    <div class="logo">H</div>
+                    <span class="logo-text">Helpify</span>
+                </div>
+                <button class="sidebar-toggle" onclick="toggleSidebar()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="m15 18-6-6 6-6"/>
+                    </svg>
+                </button>
+            </div>
             
             <a href="helper-dashboard.php" class="nav-item active">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
                     <path d="m9 9 5 12 1.774-5.226L21 14 9 9z"/>
                 </svg>
+                <span class="nav-text">Dashboard</span>
             </a>
             
             <a href="find-tasks.php" class="nav-item">
@@ -506,6 +988,7 @@ if (isset($_GET['refresh']) && $_GET['refresh'] === 'tasks') {
                     <circle cx="11" cy="11" r="8"/>
                     <path d="m21 21-4.35-4.35"/>
                 </svg>
+                <span class="nav-text">Find Tasks</span>
             </a>
             
             <a href="my-applications.php" class="nav-item">
@@ -513,6 +996,7 @@ if (isset($_GET['refresh']) && $_GET['refresh'] === 'tasks') {
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                     <polyline points="14,2 14,8 20,8"/>
                 </svg>
+                <span class="nav-text">Applications</span>
             </a>
             
             <a href="my-jobs.php" class="nav-item">
@@ -521,12 +1005,14 @@ if (isset($_GET['refresh']) && $_GET['refresh'] === 'tasks') {
                     <line x1="8" y1="21" x2="16" y2="21"/>
                     <line x1="12" y1="17" x2="12" y2="21"/>
                 </svg>
+                <span class="nav-text">My Jobs</span>
             </a>
             
-            <a href="messages.php" class="nav-item">
+            <a href="helper-messages.php" class="nav-item">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                 </svg>
+                <span class="nav-text">Messages</span>
             </a>
             
             <a href="settings.php" class="nav-item" style="margin-top: auto;">
@@ -534,34 +1020,39 @@ if (isset($_GET['refresh']) && $_GET['refresh'] === 'tasks') {
                     <circle cx="12" cy="12" r="3"/>
                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
                 </svg>
+                <span class="nav-text">Settings</span>
             </a>
         </aside>
         
         <!-- Main Content -->
-        <main class="main-content">
-            <!-- Header -->
-            <div class="header">
-                <h1 class="greeting">Good morning, <?php echo explode(' ', $fullname)[0]; ?>!</h1>
-                <div class="header-actions">
-                    <button class="header-btn">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                            <line x1="16" y1="2" x2="16" y2="6"/>
-                            <line x1="8" y1="2" x2="8" y2="6"/>
-                            <line x1="3" y1="10" x2="21" y2="10"/>
-                        </svg>
-                    </button>
-                    <button class="header-btn">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-                        </svg>
-                    </button>
-                    <div class="user-avatar">
-                        <?php echo strtoupper(substr($fullname, 0, 1)); ?>
-                    </div>
-                </div>
-            </div>
+        <main class="main-content" id="mainContent">
+<!-- Header -->
+<div class="header">
+    <h1 class="greeting">Good morning, <?php echo explode(' ', $fullname)[0]; ?>!</h1>
+    <div class="header-actions">
+        <button class="header-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+        </button>
+        
+        <!-- Notification Bell -->
+        <div class="header-btn notification-bell" style="position: relative;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            <!-- Notification badge will be added by JavaScript -->
+        </div>
+        
+        <div class="user-avatar">
+            <?php echo strtoupper(substr($fullname, 0, 1)); ?>
+        </div>
+    </div>
+</div>
             
             <!-- Stats Grid -->
             <div class="stats-grid">
@@ -574,7 +1065,7 @@ if (isset($_GET['refresh']) && $_GET['refresh'] === 'tasks') {
                         </div>
                     </div>
                     <div class="stat-value" style="color: white;">$<?php echo number_format($earnings_stats['total_earned'] ?? 0); ?></div>
-                    <div class="stat-label" style="color: rgba(255,255,255,0.9);">💰 Total earnings</div>
+                    <div class="stat-label" style="color: rgba(255,255,255,0.9);">Total earnings</div>
                 </div>
                 
                 <div class="stat-card" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white;">
@@ -587,7 +1078,19 @@ if (isset($_GET['refresh']) && $_GET['refresh'] === 'tasks') {
                         </div>
                     </div>
                     <div class="stat-value" style="color: white;" id="availableTasksCount"><?php echo $available_tasks; ?></div>
-                    <div class="stat-label" style="color: rgba(255,255,255,0.9);">🎯 Available tasks</div>
+                    <div class="stat-label" style="color: rgba(255,255,255,0.9);">Available tasks</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="stat-value"><?php echo $success_rate; ?>%</div>
+                    <div class="stat-label">Success rate</div>
                 </div>
                 
                 <div class="stat-card">
@@ -602,25 +1105,19 @@ if (isset($_GET['refresh']) && $_GET['refresh'] === 'tasks') {
                     <div class="stat-value"><?php echo $app_stats['pending_applications']; ?></div>
                     <div class="stat-label">Applications pending</div>
                 </div>
-                
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <div class="stat-icon">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                        </div>
-                    </div>
-                    <div class="stat-value"><?php echo $success_rate; ?>%</div>
-                    <div class="stat-label">Success rate</div>
-                </div>
             </div>
             
             <!-- Primary Action Banner -->
             <?php if ($available_tasks > 0): ?>
             <div style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-radius: 20px; padding: 32px; margin-bottom: 32px; color: white; display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">🎯 <?php echo $available_tasks; ?> New Tasks Available!</h2>
+                    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 12px;">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="8"/>
+                            <path d="m21 21-4.35-4.35"/>
+                        </svg>
+                        <?php echo $available_tasks; ?> New Tasks Available!
+                    </h2>
                     <p style="font-size: 16px; opacity: 0.9;">Fresh opportunities are waiting. Apply now to increase your earnings!</p>
                 </div>
                 <button onclick="refreshTasks()" style="background: white; color: #3b82f6; padding: 16px 32px; border-radius: 12px; border: none; font-weight: 700; font-size: 16px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
@@ -630,7 +1127,13 @@ if (isset($_GET['refresh']) && $_GET['refresh'] === 'tasks') {
             <?php elseif ($app_stats['pending_applications'] > 0): ?>
             <div style="background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 20px; padding: 32px; margin-bottom: 32px; color: white; display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">⏳ <?php echo $app_stats['pending_applications']; ?> Applications Under Review</h2>
+                    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 12px;">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 6v6l4 2"/>
+                        </svg>
+                        <?php echo $app_stats['pending_applications']; ?> Applications Under Review
+                    </h2>
                     <p style="font-size: 16px; opacity: 0.9;">Clients are reviewing your applications. Check for updates and apply to more tasks!</p>
                 </div>
                 <a href="my-applications.php" style="background: white; color: #f59e0b; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 16px; transition: all 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
@@ -640,7 +1143,13 @@ if (isset($_GET['refresh']) && $_GET['refresh'] === 'tasks') {
             <?php else: ?>
             <div style="background: linear-gradient(135deg, #6b7280, #4b5563); border-radius: 20px; padding: 32px; margin-bottom: 32px; color: white; display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">🔍 Looking for New Tasks</h2>
+                    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 12px;">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"/>
+                            <path d="m21 21-4.35-4.35"/>
+                        </svg>
+                        Looking for New Tasks
+                    </h2>
                     <p style="font-size: 16px; opacity: 0.9;">No new tasks available right now. We'll notify you when opportunities arise!</p>
                 </div>
                 <button onclick="refreshTasks()" style="background: white; color: #4b5563; padding: 16px 32px; border-radius: 12px; border: none; font-weight: 700; font-size: 16px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
@@ -652,9 +1161,17 @@ if (isset($_GET['refresh']) && $_GET['refresh'] === 'tasks') {
             <!-- Available Tasks Section -->
             <div class="tasks-section">
                 <div class="tasks-header">
-                    <h2 class="tasks-title">Available Tasks</h2>
+                    <h2 class="tasks-title">
+                        <div class="title-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                                <circle cx="12" cy="12" r="8"/>
+                                <path d="m21 21-4.35-4.35"/>
+                            </svg>
+                        </div>
+                        Available Tasks
+                    </h2>
                     <button class="refresh-btn" onclick="refreshTasks()">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="23 4 23 10 17 10"/>
                             <polyline points="1 20 1 14 7 14"/>
                             <path d="m3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
@@ -676,16 +1193,21 @@ if (isset($_GET['refresh']) && $_GET['refresh'] === 'tasks') {
                 <div class="task-list" id="taskList">
                     <?php if (empty($available_task_list)): ?>
                         <div class="no-tasks">
-                            <div class="no-tasks-icon">🎯</div>
-                            <h3 style="color: #333; margin-bottom: 12px;">No Available Tasks</h3>
-                            <p style="color: #666; margin-bottom: 24px;">
+                            <div class="no-tasks-icon">
+                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2">
+                                    <circle cx="12" cy="12" r="8"/>
+                                    <path d="m21 21-4.35-4.35"/>
+                                </svg>
+                            </div>
+                            <h3 style="color: #333; margin-bottom: 12px; font-size: 24px; font-weight: 600;">No Available Tasks</h3>
+                            <p style="color: #666; margin-bottom: 24px; font-size: 16px; line-height: 1.5;">
                                 <?php if ($available_tasks === 0 && isset($total_open_tasks) && $total_open_tasks > 0): ?>
                                     There are <?php echo $total_open_tasks; ?> open tasks in the system, but they may be from you or you may have already applied to them.
                                 <?php else: ?>
                                     No tasks available at the moment. Check back later for new opportunities!
                                 <?php endif; ?>
                             </p>
-                            <button onclick="refreshTasks()" style="background: #667eea; color: white; padding: 12px 24px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                            <button onclick="refreshTasks()" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; padding: 14px 28px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 16px; transition: all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
                                 Refresh Tasks
                             </button>
                         </div>
@@ -697,7 +1219,7 @@ if (isset($_GET['refresh']) && $_GET['refresh'] === 'tasks') {
                                     <span class="task-status">Open</span>
                                 </div>
                                 
-                                <p style="color: #666; margin-bottom: 12px; line-height: 1.4;">
+                                <p class="task-description">
                                     <?php echo htmlspecialchars(substr($task['description'], 0, 150)) . (strlen($task['description']) > 150 ? '...' : ''); ?>
                                 </p>
                                 
@@ -751,8 +1273,19 @@ if (isset($_GET['refresh']) && $_GET['refresh'] === 'tasks') {
                                 </div>
                                 
                                 <div class="task-actions">
-                                    <button class="task-btn task-btn-primary" onclick="viewTask(<?php echo $task['id']; ?>)">View Details</button>
-                                    <button class="task-btn task-btn-secondary" onclick="applyTask(<?php echo $task['id']; ?>)">Apply Now</button>
+                                    <button class="task-btn task-btn-primary" onclick="viewTask(<?php echo $task['id']; ?>)">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                            <circle cx="12" cy="12" r="3"/>
+                                        </svg>
+                                        View Details
+                                    </button>
+                                    <button class="task-btn task-btn-secondary" onclick="applyTask(<?php echo $task['id']; ?>)">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        Apply Now
+                                    </button>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -763,6 +1296,23 @@ if (isset($_GET['refresh']) && $_GET['refresh'] === 'tasks') {
     </div>
     
     <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            
+            sidebar.classList.toggle('collapsed');
+            sidebar.classList.toggle('expanded');
+            mainContent.classList.toggle('collapsed');
+            
+            // Update toggle icon
+            const toggleBtn = sidebar.querySelector('.sidebar-toggle svg');
+            if (sidebar.classList.contains('collapsed')) {
+                toggleBtn.innerHTML = '<path d="m9 18 6-6-6-6"/>';
+            } else {
+                toggleBtn.innerHTML = '<path d="m15 18-6-6 6-6"/>';
+            }
+        }
+        
         function viewTask(taskId) {
             window.location.href = `task-details.php?id=${taskId}`;
         }
@@ -820,5 +1370,6 @@ if (isset($_GET['refresh']) && $_GET['refresh'] === 'tasks') {
         `;
         document.head.appendChild(style);
     </script>
+    <script src="js/notifications.js"></script>
 </body>
 </html>

@@ -116,7 +116,6 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Client Dashboard | Helpify</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- <link rel="stylesheet" href="client.css"> -->
     <style>
         * {
             margin: 0;
@@ -138,15 +137,31 @@ try {
         
         /* Sidebar */
         .sidebar {
-            width: 80px;
+            width: 240px;
             background: #1a1a1a;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            padding: 24px 16px;
+            align-items: flex-start;
+            padding: 24px;
             position: fixed;
             height: 100vh;
             z-index: 1000;
+            transition: width 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .sidebar.collapsed {
+            width: 80px;
+            align-items: center;
+            padding: 24px 16px;
+        }
+        
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 32px;
         }
         
         .logo {
@@ -157,24 +172,56 @@ try {
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 32px;
             font-weight: 700;
             color: #1a1a1a;
             font-size: 18px;
+            flex-shrink: 0;
+        }
+        
+        .logo-text {
+            color: white;
+            font-size: 20px;
+            font-weight: 700;
+            margin-left: 16px;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+        
+        .sidebar.collapsed .logo-text {
+            opacity: 0;
+        }
+        
+        .sidebar-toggle {
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            opacity: 1;
+        }
+        
+        .sidebar-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
         }
         
         .nav-item {
-            width: 48px;
+            width: 100%;
             height: 48px;
             border-radius: 12px;
             display: flex;
             align-items: center;
-            justify-content: center;
             margin-bottom: 16px;
             color: #666;
             text-decoration: none;
             transition: all 0.2s;
             position: relative;
+            padding: 0 12px;
         }
         
         .nav-item:hover, .nav-item.active {
@@ -185,14 +232,33 @@ try {
         .nav-item svg {
             width: 24px;
             height: 24px;
+            flex-shrink: 0;
+        }
+        
+        .nav-text {
+            margin-left: 16px;
+            font-size: 14px;
+            font-weight: 500;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+            white-space: nowrap;
+        }
+        
+        .sidebar.collapsed .nav-text {
+            opacity: 0;
         }
         
         /* Main Content */
         .main-content {
             flex: 1;
-            margin-left: 80px;
+            margin-left: 240px;
             padding: 32px;
             overflow-y: auto;
+            transition: margin-left 0.3s ease;
+        }
+        
+        .main-content.collapsed {
+            margin-left: 80px;
         }
         
         /* Header */
@@ -302,233 +368,165 @@ try {
             font-weight: 500;
         }
         
-        /* Content Grid */
-        .content-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 400px;
-            gap: 32px;
-        }
-        
-        .content-card {
+        .tasks-section {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border-radius: 20px;
-            padding: 24px;
+            padding: 32px;
+            margin-top: 32px;
         }
         
-        .card-header {
+        .tasks-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 24px;
+            margin-bottom: 32px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f1f5f9;
         }
         
-        .card-title {
-            font-size: 20px;
-            font-weight: 600;
-            color: #1a1a1a;
-        }
-        
-        .metric-container {
-            display: flex;
-            align-items: baseline;
-            gap: 16px;
-            margin-bottom: 16px;
-        }
-        
-        .metric-value {
-            font-size: 48px;
+        .tasks-title {
+            font-size: 28px;
             font-weight: 700;
             color: #1a1a1a;
-            line-height: 1;
-        }
-        
-        .metric-change {
-            background: #dcfce7;
-            color: #166534;
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        
-        .metric-change.negative {
-            background: #fee2e2;
-            color: #dc2626;
-        }
-        
-        /* Application Item */
-        .application-item {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 12px 0;
-            border-bottom: 1px solid #f1f5f9;
         }
         
-        .application-item:last-child {
-            border-bottom: none;
-        }
-        
-        .applicant-avatar {
-            width: 40px;
-            height: 40px;
+        .title-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
             border-radius: 10px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
-            font-weight: 600;
-            font-size: 14px;
         }
         
-        .application-info {
-            flex: 1;
+        .task-list {
+            display: grid;
+            gap: 20px;
         }
         
-        .applicant-name {
-            font-weight: 600;
-            color: #1a1a1a;
-            margin-bottom: 2px;
-            font-size: 14px;
+        .task-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            border: 1px solid #f1f5f9;
         }
         
-        .application-task {
-            font-size: 12px;
-            color: #666;
-        }
-        
-        .application-time {
-            font-size: 12px;
-            color: #666;
-        }
-        
-        /* Task Item */
-        .task-item {
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 12px;
-        }
-        
-        .task-item:last-child {
-            margin-bottom: 0;
+        .task-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
         }
         
         .task-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
+            align-items: flex-start;
+            margin-bottom: 16px;
         }
         
         .task-title {
+            font-size: 20px;
             font-weight: 600;
             color: #1a1a1a;
-            font-size: 14px;
+            line-height: 1.3;
         }
         
         .task-status {
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 11px;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
             font-weight: 600;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
-        .status-open { background: #dbeafe; color: #1e40af; }
-        .status-in_progress { background: #fed7aa; color: #c2410c; }
-        .status-completed { background: #dcfce7; color: #166534; }
-        .status-pending { background: #f3e8ff; color: #7c3aed; }
-        
-        .task-meta {
-            font-size: 12px;
-            color: #666;
+        .status-open { 
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8); 
+            color: white; 
+        }
+        .status-in_progress { 
+            background: linear-gradient(135deg, #f59e0b, #d97706); 
+            color: white; 
+        }
+        .status-completed { 
+            background: linear-gradient(135deg, #10b981, #059669); 
+            color: white; 
+        }
+        .status-pending { 
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed); 
+            color: white; 
         }
         
-        /* Sidebar Cards */
-        .sidebar-card {
-            background: #1a1a1a;
-            border-radius: 20px;
-            padding: 24px;
-            color: white;
-            margin-bottom: 24px;
+        .task-description {
+            color: #64748b;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            font-size: 15px;
         }
         
-        .sidebar-card h3 {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 12px;
+        .task-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+            padding: 16px;
+            background: #f8fafc;
+            border-radius: 12px;
         }
         
-        .progress-bar {
-            background: #333;
-            height: 8px;
-            border-radius: 4px;
-            margin: 16px 0;
-            overflow: hidden;
-        }
-        
-        .progress-fill {
-            background: white;
-            height: 100%;
-            width: 65%;
-            border-radius: 4px;
-        }
-        
-        .todo-item {
+        .task-detail {
             display: flex;
             align-items: center;
+            gap: 10px;
+            color: #475569;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .task-detail svg {
+            width: 18px;
+            height: 18px;
+            color: #3b82f6;
+        }
+        
+        .task-actions {
+            display: flex;
             gap: 12px;
-            padding: 12px 0;
-            border-bottom: 1px solid #333;
         }
         
-        .todo-item:last-child {
-            border-bottom: none;
-        }
-        
-        .todo-icon {
-            width: 32px;
-            height: 32px;
-            background: #333;
-            border-radius: 8px;
+        .task-btn {
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
             display: flex;
             align-items: center;
             justify-content: center;
+            gap: 8px;
         }
         
-        .todo-info h4 {
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 2px;
-        }
-        
-        .todo-info p {
-            font-size: 12px;
-            color: #999;
-        }
-        
-        .meeting-card {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border-radius: 16px;
-            padding: 20px;
+        .task-btn-primary {
+            background: linear-gradient(135deg, #4f46e5, #3730a3);
             color: white;
         }
         
-        .meeting-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
+        .task-btn-secondary {
+            background: linear-gradient(135deg, #6b7280, #4b5563);
+            color: white;
         }
         
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            background: #4ade80;
-            border-radius: 50%;
+        .task-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
         
         /* Modal Styles */
@@ -739,20 +737,12 @@ try {
         }
         
         @media (max-width: 1200px) {
-            .content-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-            
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
         }
         
         @media (max-width: 768px) {
-            .content-grid {
-                grid-template-columns: 1fr;
-            }
-            
             .stats-grid {
                 grid-template-columns: 1fr;
             }
@@ -762,132 +752,42 @@ try {
                 padding: 16px;
             }
             
-            .sidebar {
-                display: none;
+            .main-content.collapsed {
+                margin-left: 80px;
             }
-        }
-        
-        .tasks-section {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 24px;
-            margin-top: 32px;
-        }
-        
-        .tasks-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-        }
-        
-        .tasks-title {
-            font-size: 24px;
-            font-weight: 600;
-            color: #1a1a1a;
-        }
-        
-        .task-list {
-            display: grid;
-            gap: 16px;
-        }
-        
-        .task-card {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            transition: transform 0.2s;
-        }
-        
-        .task-card:hover {
-            transform: translateY(-2px);
-        }
-        
-        .task-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 12px;
-        }
-        
-        .task-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #1a1a1a;
-        }
-        
-        .task-status {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 500;
-        }
-        
-        .task-details {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin-top: 16px;
-        }
-        
-        .task-detail {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: #666;
-            font-size: 14px;
-        }
-        
-        .task-detail svg {
-            width: 16px;
-            height: 16px;
-        }
-        
-        .task-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 16px;
-        }
-        
-        .task-btn {
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .task-btn-primary {
-            background: #4f46e5;
-            color: white;
-            border: none;
-        }
-        
-        .task-btn-secondary {
-            background: #f3f4f6;
-            color: #4b5563;
-            border: none;
-        }
-        
-        .task-btn:hover {
-            opacity: 0.9;
+            
+            .sidebar.collapsed {
+                width: 80px;
+            }
+            
+            .task-details {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
     <div class="dashboard-container">
         <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="logo">H</div>
+        <aside class="sidebar expanded" id="sidebar">
+            <div class="sidebar-header">
+                <div style="display: flex; align-items: center;">
+                    <div class="logo">H</div>
+                    <span class="logo-text">Helpify</span>
+                </div>
+                <button class="sidebar-toggle" onclick="toggleSidebar()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="m15 18-6-6 6-6"/>
+                    </svg>
+                </button>
+            </div>
             
             <a href="client-dashboard.php" class="nav-item active">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
                     <path d="m9 9 5 12 1.774-5.226L21 14 9 9z"/>
                 </svg>
+                <span class="nav-text">Dashboard</span>
             </a>
             
             <a href="my-tasks.php" class="nav-item">
@@ -895,6 +795,7 @@ try {
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                     <polyline points="14,2 14,8 20,8"/>
                 </svg>
+                <span class="nav-text">My Tasks</span>
             </a>
             
             <a href="post-task.php" class="nav-item">
@@ -903,6 +804,7 @@ try {
                     <line x1="12" y1="8" x2="12" y2="16"/>
                     <line x1="8" y1="12" x2="16" y2="12"/>
                 </svg>
+                <span class="nav-text">Post Task</span>
             </a>
             
             <a href="applications.php" class="nav-item">
@@ -910,12 +812,14 @@ try {
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                     <circle cx="9" cy="7" r="4"/>
                 </svg>
+                <span class="nav-text">Applications</span>
             </a>
             
             <a href="messages.php" class="nav-item">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                 </svg>
+                <span class="nav-text">Messages</span>
             </a>
             
             <a href="settings.php" class="nav-item" style="margin-top: auto;">
@@ -923,23 +827,16 @@ try {
                     <circle cx="12" cy="12" r="3"/>
                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
                 </svg>
+                <span class="nav-text">Settings</span>
             </a>
         </aside>
         
         <!-- Main Content -->
-        <main class="main-content">
+        <main class="main-content" id="mainContent">
             <!-- Header -->
             <div class="header">
                 <h1 class="greeting">Good morning, <?php echo explode(' ', $fullname)[0]; ?>!</h1>
                 <div class="header-actions">
-                    <button class="header-btn">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                            <line x1="16" y1="2" x2="16" y2="6"/>
-                            <line x1="8" y1="2" x2="8" y2="6"/>
-                            <line x1="3" y1="10" x2="21" y2="10"/>
-                        </svg>
-                    </button>
                     <button class="header-btn">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
@@ -970,7 +867,7 @@ try {
                         </button>
                     </div>
                     <div class="stat-value" style="color: white; font-size: 42px;">$<?php echo number_format($stats['pending_budget']); ?></div>
-                    <div class="stat-label" style="color: rgba(255,255,255,0.9);">💰 Active task budget</div>
+                    <div class="stat-label" style="color: rgba(255,255,255,0.9);">Active task budget</div>
                 </div>
                 
                 <div class="stat-card">
@@ -1124,7 +1021,13 @@ try {
             <?php if ($pending_apps > 0): ?>
             <div style="background: linear-gradient(135deg, #ef4444, #dc2626); border-radius: 20px; padding: 32px; margin-bottom: 32px; color: white; display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">🚨 <?php echo $pending_apps; ?> Applications Need Your Review!</h2>
+                    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 12px;">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 8v4m0 4h.01"/>
+                        </svg>
+                        <?php echo $pending_apps; ?> Applications Need Your Review!
+                    </h2>
                     <p style="font-size: 16px; opacity: 0.9;">Helpers are waiting for your response. Review applications to get your tasks started.</p>
                 </div>
                 <a href="applications.php" style="background: white; color: #ef4444; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 16px; transition: all 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
@@ -1136,51 +1039,96 @@ try {
             <!-- Tasks Section -->
             <div class="tasks-section">
                 <div class="tasks-header">
-                    <h2 class="tasks-title">Your Tasks</h2>
-                    <button class="task-btn task-btn-primary" onclick="openTaskModal()">Create New Task</button>
+                    <h2 class="tasks-title">
+                        <div class="title-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14,2 14,8 20,8"/>
+                            </svg>
+                        </div>
+                        Your Tasks
+                    </h2>
+                    <button class="task-btn task-btn-primary" onclick="openTaskModal()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="16"/>
+                            <line x1="8" y1="12" x2="16" y2="12"/>
+                        </svg>
+                        Create New Task
+                    </button>
                 </div>
                 
                 <div class="task-list">
-                    <?php foreach ($all_tasks as $task): ?>
-                        <div class="task-card">
-                            <div class="task-header">
-                                <h3 class="task-title"><?php echo htmlspecialchars($task['title']); ?></h3>
-                                <span class="task-status status-<?php echo $task['status']; ?>">
-                                    <?php echo ucfirst(str_replace('_', ' ', $task['status'])); ?>
-                                </span>
+                    <?php if (empty($all_tasks)): ?>
+                        <div style="text-align: center; padding: 80px 20px; background: linear-gradient(135deg, #f8fafc, #e2e8f0); border-radius: 16px; border: 2px dashed #cbd5e1;">
+                            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #e2e8f0, #cbd5e1); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;">
+                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14,2 14,8 20,8"/>
+                                </svg>
                             </div>
-                            
-                            <p class="task-description"><?php echo htmlspecialchars(substr($task['description'], 0, 150)) . '...'; ?></p>
-                            
-                            <div class="task-details">
-                                <div class="task-detail">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    <?php echo date('M d, Y', strtotime($task['scheduled_time'])); ?>
-                                </div>
-                                <div class="task-detail">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                                    </svg>
-                                    $<?php echo number_format($task['budget'], 2); ?>
-                                </div>
-                                <div class="task-detail">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                                    </svg>
-                                    <?php echo $task['application_count']; ?> Applications
-                                </div>
-                            </div>
-                            
-                            <div class="task-actions">
-                                <button class="task-btn task-btn-primary" onclick="viewTask(<?php echo $task['id']; ?>)">View Details</button>
-                                <?php if ($task['status'] === 'open'): ?>
-                                    <button class="task-btn task-btn-secondary" onclick="editTask(<?php echo $task['id']; ?>)">Edit</button>
-                                <?php endif; ?>
-                            </div>
+                            <h3 style="color: #333; margin-bottom: 12px; font-size: 24px; font-weight: 600;">No Tasks Yet</h3>
+                            <p style="color: #666; margin-bottom: 24px; font-size: 16px; line-height: 1.5;">
+                                Start by creating your first task. Get help with anything from home repairs to personal assistance.
+                            </p>
+                            <button onclick="openTaskModal()" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; padding: 14px 28px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 16px; transition: all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                                Create Your First Task
+                            </button>
                         </div>
-                    <?php endforeach; ?>
+                    <?php else: ?>
+                        <?php foreach ($all_tasks as $task): ?>
+                            <div class="task-card">
+                                <div class="task-header">
+                                    <h3 class="task-title"><?php echo htmlspecialchars($task['title']); ?></h3>
+                                    <span class="task-status status-<?php echo $task['status']; ?>">
+                                        <?php echo ucfirst(str_replace('_', ' ', $task['status'])); ?>
+                                    </span>
+                                </div>
+                                
+                                <p class="task-description"><?php echo htmlspecialchars(substr($task['description'], 0, 150)) . '...'; ?></p>
+                                
+                                <div class="task-details">
+                                    <div class="task-detail">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        <?php echo date('M d, Y', strtotime($task['scheduled_time'])); ?>
+                                    </div>
+                                    <div class="task-detail">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                                        </svg>
+                                        $<?php echo number_format($task['budget'], 2); ?>
+                                    </div>
+                                    <div class="task-detail">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                        </svg>
+                                        <?php echo $task['application_count']; ?> Applications
+                                    </div>
+                                </div>
+                                
+                                <div class="task-actions">
+                                    <button class="task-btn task-btn-primary" onclick="viewTask(<?php echo $task['id']; ?>)">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                            <circle cx="12" cy="12" r="3"/>
+                                        </svg>
+                                        View Details
+                                    </button>
+                                    <?php if ($task['status'] === 'open'): ?>
+                                        <button class="task-btn task-btn-secondary" onclick="editTask(<?php echo $task['id']; ?>)">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                            </svg>
+                                            Edit
+                                        </button>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </div>
             </div>
         </main>
@@ -1266,6 +1214,23 @@ try {
     </div>
     
     <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            
+            sidebar.classList.toggle('collapsed');
+            sidebar.classList.toggle('expanded');
+            mainContent.classList.toggle('collapsed');
+            
+            // Update toggle icon
+            const toggleBtn = sidebar.querySelector('.sidebar-toggle svg');
+            if (sidebar.classList.contains('collapsed')) {
+                toggleBtn.innerHTML = '<path d="m9 18 6-6-6-6"/>';
+            } else {
+                toggleBtn.innerHTML = '<path d="m15 18-6-6 6-6"/>';
+            }
+        }
+        
         function viewTask(taskId) {
             // Implement task details view
             window.location.href = `task-details.php?id=${taskId}`;
@@ -1416,4 +1381,12 @@ try {
         });
     </script>
 </body>
-</html>
+</html>-btn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                            <line x1="16" y1="2" x2="16" y2="6"/>
+                            <line x1="8" y1="2" x2="8" y2="6"/>
+                            <line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                    </button>
+                    <button class="header
