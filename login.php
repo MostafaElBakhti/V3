@@ -94,7 +94,7 @@ if (isLoggedIn()) {
 
     .login-image {
       flex: 1;
-      background: linear-gradient(135deg, var(--secondary) 0%, var(--accent) 100%);
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
       color: white;
       display: flex;
       flex-direction: column;

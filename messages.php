@@ -22,14 +22,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_message'])) {
     
     if (!empty($message_content) && $task_id > 0 && $receiver_id > 0) {
         try {
-            // Verify the user has access to this task
-            $verify_stmt = $pdo->prepare("
-                SELECT id FROM tasks 
-                WHERE id = ? AND (client_id = ? OR helper_id = ?)
-            ");
-            $verify_stmt->execute([$task_id, $user_id, $user_id]);
+            // Verify the user has access to this task (must be the client who owns the task)
+            $verify_stmt = $pdo->prepare("SELECT id, title FROM tasks WHERE id = ? AND client_id = ?");
+            $verify_stmt->execute([$task_id, $user_id]);
+            $task_info = $verify_stmt->fetch();
             
-            if ($verify_stmt->fetch()) {
+            if ($task_info) {
                 // Insert message
                 $insert_stmt = $pdo->prepare("
                     INSERT INTO messages (task_id, sender_id, receiver_id, message, created_at) 
@@ -42,12 +40,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_message'])) {
                     INSERT INTO notifications (user_id, type, content, related_id, created_at) 
                     VALUES (?, 'message', ?, ?, NOW())
                 ");
-                $notification_content = "New message from " . $fullname;
+                $notification_content = "New message from " . $fullname . " regarding '" . $task_info['title'] . "'";
                 $notification_stmt->execute([$receiver_id, $notification_content, $task_id]);
                 
                 $success_message = "Message sent successfully!";
+            } else {
+                $error_message = "You don't have permission to message about this task.";
             }
         } catch (PDOException $e) {
+            error_log("Message send error: " . $e->getMessage());
             $error_message = "Error sending message. Please try again.";
         }
     } else {
@@ -55,32 +56,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_message'])) {
     }
 }
 
-// Mark messages as read when viewing a conversation
-if ($selected_task_id > 0 && $selected_helper_id > 0) {
-    try {
-        $mark_read_stmt = $pdo->prepare("
-            UPDATE messages 
-            SET is_read = TRUE 
-            WHERE task_id = ? AND receiver_id = ? AND sender_id = ?
-        ");
-        $mark_read_stmt->execute([$selected_task_id, $user_id, $selected_helper_id]);
-    } catch (PDOException $e) {
-        // Silent error - don't interrupt user experience
-    }
-}
-
 try {
-    // Get all conversations (grouped by task and other participant)
+    // Get all conversations for this client
+    // We need to find all tasks owned by this client that have messages
     $conversations_stmt = $pdo->prepare("
         SELECT DISTINCT
             m.task_id,
             t.title as task_title,
             t.status as task_status,
+            t.budget,
+            t.location,
+            t.scheduled_time,
             CASE 
                 WHEN m.sender_id = ? THEN m.receiver_id 
                 ELSE m.sender_id 
             END as other_user_id,
             u.fullname as other_user_name,
+            u.email as other_user_email,
+            u.rating as other_user_rating,
             u.profile_image as other_user_image,
             (SELECT message FROM messages m2 
              WHERE m2.task_id = m.task_id 
@@ -102,11 +95,11 @@ try {
             WHEN m.sender_id = ? THEN m.receiver_id 
             ELSE m.sender_id 
         END
-        WHERE t.client_id = ? OR t.helper_id = ?
+        WHERE t.client_id = ?
         ORDER BY last_message_time DESC
     ");
     $conversations_stmt->execute([
-        $user_id, $user_id, $user_id, $user_id, $user_id, $user_id, $user_id, $user_id, $user_id
+        $user_id, $user_id, $user_id, $user_id, $user_id, $user_id, $user_id, $user_id
     ]);
     $conversations = $conversations_stmt->fetchAll();
     
@@ -115,40 +108,55 @@ try {
     $selected_conversation = null;
     
     if ($selected_task_id > 0 && $selected_helper_id > 0) {
-        // Get conversation details
+        // Verify access to this conversation - client must own the task
         $conv_stmt = $pdo->prepare("
             SELECT 
+                t.id,
                 t.title as task_title,
                 t.status as task_status,
                 t.budget,
                 t.location,
                 t.scheduled_time,
-                u.fullname as other_user_name,
-                u.profile_image as other_user_image,
-                u.rating as other_user_rating
+                t.description,
+                u.fullname as helper_name,
+                u.email as helper_email,
+                u.rating as helper_rating,
+                u.profile_image as helper_image,
+                u.total_ratings
             FROM tasks t
             JOIN users u ON u.id = ?
-            WHERE t.id = ? AND (t.client_id = ? OR t.helper_id = ?)
+            WHERE t.id = ? AND t.client_id = ?
         ");
-        $conv_stmt->execute([$selected_helper_id, $selected_task_id, $user_id, $user_id]);
+        $conv_stmt->execute([$selected_helper_id, $selected_task_id, $user_id]);
         $selected_conversation = $conv_stmt->fetch();
         
-        // Get messages for this conversation
-        $messages_stmt = $pdo->prepare("
-            SELECT 
-                m.*,
-                u.fullname as sender_name,
-                u.profile_image as sender_image
-            FROM messages m
-            JOIN users u ON m.sender_id = u.id
-            WHERE m.task_id = ? 
-            AND ((m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?))
-            ORDER BY m.created_at ASC
-        ");
-        $messages_stmt->execute([
-            $selected_task_id, $user_id, $selected_helper_id, $selected_helper_id, $user_id
-        ]);
-        $messages = $messages_stmt->fetchAll();
+        if ($selected_conversation) {
+            // Get messages for this conversation
+            $messages_stmt = $pdo->prepare("
+                SELECT 
+                    m.*,
+                    sender.fullname as sender_name,
+                    receiver.fullname as receiver_name
+                FROM messages m
+                JOIN users sender ON m.sender_id = sender.id
+                JOIN users receiver ON m.receiver_id = receiver.id
+                WHERE m.task_id = ? 
+                AND ((m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?))
+                ORDER BY m.created_at ASC
+            ");
+            $messages_stmt->execute([
+                $selected_task_id, $user_id, $selected_helper_id, $selected_helper_id, $user_id
+            ]);
+            $messages = $messages_stmt->fetchAll();
+            
+            // Mark messages as read
+            $mark_read_stmt = $pdo->prepare("
+                UPDATE messages 
+                SET is_read = TRUE 
+                WHERE task_id = ? AND receiver_id = ? AND sender_id = ? AND is_read = FALSE
+            ");
+            $mark_read_stmt->execute([$selected_task_id, $user_id, $selected_helper_id]);
+        }
     }
     
     // Get total unread count
@@ -156,13 +164,13 @@ try {
         SELECT COUNT(*) as total_unread
         FROM messages m
         JOIN tasks t ON m.task_id = t.id
-        WHERE m.receiver_id = ? AND m.is_read = FALSE
-        AND (t.client_id = ? OR t.helper_id = ?)
+        WHERE m.receiver_id = ? AND m.is_read = FALSE AND t.client_id = ?
     ");
-    $unread_stmt->execute([$user_id, $user_id, $user_id]);
+    $unread_stmt->execute([$user_id, $user_id]);
     $total_unread = $unread_stmt->fetch()['total_unread'];
     
 } catch (PDOException $e) {
+    error_log("Messages query error: " . $e->getMessage());
     $conversations = [];
     $messages = [];
     $selected_conversation = null;
@@ -308,6 +316,16 @@ try {
             opacity: 0;
         }
         
+        .unread-badge {
+            background: #ef4444;
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: auto;
+        }
+        
         /* Main Content */
         .main-content {
             flex: 1;
@@ -373,16 +391,6 @@ try {
             font-size: 14px;
         }
         
-        .unread-badge {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-            margin-left: auto;
-        }
-        
         .conversations-list {
             flex: 1;
             overflow-y: auto;
@@ -417,7 +425,7 @@ try {
             width: 48px;
             height: 48px;
             border-radius: 12px;
-            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            background: linear-gradient(135deg, #10b981, #059669);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -593,7 +601,7 @@ try {
             width: 40px;
             height: 40px;
             border-radius: 10px;
-            background: linear-gradient(135deg, #6b7280, #4b5563);
+            background: linear-gradient(135deg, #10b981, #059669);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -783,6 +791,22 @@ try {
             width: 20px;
             height: 20px;
             flex-shrink: 0;
+        }
+        
+        /* Date dividers */
+        .message-date {
+            text-align: center;
+            margin: 24px 0 16px;
+        }
+        
+        .date-divider {
+            background: #e2e8f0;
+            color: #64748b;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
         }
         
         /* Responsive */
@@ -981,13 +1005,17 @@ try {
                                         </div>
                                         <div class="conversation-time">
                                             <?php 
-                                            $time_diff = time() - strtotime($conv['last_message_time']);
-                                            if ($time_diff < 3600) {
-                                                echo floor($time_diff / 60) . 'm';
-                                            } elseif ($time_diff < 86400) {
-                                                echo floor($time_diff / 3600) . 'h';
-                                            } else {
-                                                echo date('M j', strtotime($conv['last_message_time']));
+                                            if ($conv['last_message_time']) {
+                                                $time_diff = time() - strtotime($conv['last_message_time']);
+                                                if ($time_diff < 60) {
+                                                    echo 'Just now';
+                                                } elseif ($time_diff < 3600) {
+                                                    echo floor($time_diff / 60) . 'm ago';
+                                                } elseif ($time_diff < 86400) {
+                                                    echo floor($time_diff / 3600) . 'h ago';
+                                                } else {
+                                                    echo date('M j', strtotime($conv['last_message_time']));
+                                                }
                                             }
                                             ?>
                                         </div>
@@ -1005,10 +1033,10 @@ try {
                         <div class="chat-header">
                             <div class="chat-header-content">
                                 <div class="chat-avatar">
-                                    <?php echo strtoupper(substr($selected_conversation['other_user_name'], 0, 1)); ?>
+                                    <?php echo strtoupper(substr($selected_conversation['helper_name'], 0, 1)); ?>
                                 </div>
                                 <div class="chat-info">
-                                    <div class="chat-name"><?php echo htmlspecialchars($selected_conversation['other_user_name']); ?></div>
+                                    <div class="chat-name"><?php echo htmlspecialchars($selected_conversation['helper_name']); ?></div>
                                     <div class="chat-task-title"><?php echo htmlspecialchars($selected_conversation['task_title']); ?></div>
                                     <div class="chat-task-details">
                                         <span>💰 $<?php echo number_format($selected_conversation['budget'], 2); ?></span>
@@ -1049,24 +1077,48 @@ try {
                                     </div>
                                     <h3 class="empty-title">Start the Conversation</h3>
                                     <p class="empty-description">
-                                        Send a message to <?php echo htmlspecialchars($selected_conversation['other_user_name']); ?> about your task.
+                                        Send a message to <?php echo htmlspecialchars($selected_conversation['helper_name']); ?> about your task.
                                     </p>
                                 </div>
                             <?php else: ?>
-                                <?php foreach ($messages as $message): ?>
-                                    <div class="message <?php echo ($message['sender_id'] == $user_id) ? 'own' : ''; ?>">
-                                        <div class="message-avatar">
-                                            <?php echo strtoupper(substr($message['sender_name'], 0, 1)); ?>
+                                <?php 
+                                $current_date = '';
+                                foreach ($messages as $message): 
+                                    $message_date = date('Y-m-d', strtotime($message['created_at']));
+                                    if ($message_date !== $current_date):
+                                        $current_date = $message_date;
+                                ?>
+                                    <div class="message-date">
+                                        <span class="date-divider">
+                                            <?php 
+                                            $today = date('Y-m-d');
+                                            $yesterday = date('Y-m-d', strtotime('-1 day'));
+                                            
+                                            if ($message_date === $today) {
+                                                echo 'Today';
+                                            } elseif ($message_date === $yesterday) {
+                                                echo 'Yesterday';
+                                            } else {
+                                                echo date('F j, Y', strtotime($message_date));
+                                            }
+                                            ?>
+                                        </span>
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <div class="message <?php echo ($message['sender_id'] == $user_id) ? 'own' : ''; ?>">
+                                    <div class="message-avatar">
+                                        <?php echo strtoupper(substr($message['sender_name'], 0, 1)); ?>
+                                    </div>
+                                    <div class="message-content">
+                                        <div class="message-bubble">
+                                            <div class="message-text"><?php echo nl2br(htmlspecialchars($message['message'])); ?></div>
                                         </div>
-                                        <div class="message-content">
-                                            <div class="message-bubble">
-                                                <div class="message-text"><?php echo nl2br(htmlspecialchars($message['message'])); ?></div>
-                                            </div>
-                                            <div class="message-time">
-                                                <?php echo date('M j, g:i A', strtotime($message['created_at'])); ?>
-                                            </div>
+                                        <div class="message-time">
+                                            <?php echo date('M j, g:i A', strtotime($message['created_at'])); ?>
                                         </div>
                                     </div>
+                                </div>
                                 <?php endforeach; ?>
                             <?php endif; ?>
                         </div>

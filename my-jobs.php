@@ -1283,37 +1283,29 @@ try {
                 </svg>
                 <span class="nav-text">Settings</span>
             </a>
+
+            <a href="logout.php" class="nav-item" style="margin-top: 16px; color: #ef4444;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+                <span class="nav-text">Logout</span>
+            </a>
         </aside>
         
         <!-- Main Content -->
         <main class="main-content" id="mainContent">
             <!-- Header -->
             <div class="header">
-                  <h1 class="greeting">Good morning, <?php echo explode(' ', $fullname)[0]; ?>!</h1>
-                 <div class="header-actions">
-        <button class="header-btn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                <line x1="16" y1="2" x2="16" y2="6"/>
-                <line x1="8" y1="2" x2="8" y2="6"/>
-                <line x1="3" y1="10" x2="21" y2="10"/>
-            </svg>
-        </button>
-        
-        <!-- Notification Bell -->
-        <div class="header-btn notification-bell" style="position: relative;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-            </svg>
-            <!-- Notification badge will be added by JavaScript -->
-        </div>
-        
-        <div class="user-avatar">
-            <?php echo strtoupper(substr($fullname, 0, 1)); ?>
-        </div>
-    </div>
-</div>
+                <h1 class="greeting">Good morning, <?php echo explode(' ', $fullname)[0]; ?>!</h1>
+                <div class="header-actions">
+                    
+                    <div class="user-avatar">
+                        <?php echo strtoupper(substr($fullname, 0, 1)); ?>
+                    </div>
+                </div>
+            </div>
 
             <!-- Page Header -->
             <div class="page-header">

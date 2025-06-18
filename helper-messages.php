@@ -1,7 +1,6 @@
 <?php
 require_once 'config.php';
 
-
 // Check if user is logged in and is a helper
 if (!isLoggedIn() || $_SESSION['user_type'] !== 'helper') {
     redirect('login.php');
@@ -55,27 +54,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_message'])) {
                 $error_message = "You don't have permission to message about this task.";
             }
         } catch (PDOException $e) {
+            error_log("Helper message send error: " . $e->getMessage());
             $error_message = "Error sending message. Please try again.";
         }
     } else {
         $error_message = "Please enter a valid message.";
-    }
-}
-
-// Handle mark as read
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_read'])) {
-    $conversation_task_id = intval($_POST['conversation_task_id']);
-    $conversation_client_id = intval($_POST['conversation_client_id']);
-    
-    try {
-        $mark_read_stmt = $pdo->prepare("
-            UPDATE messages 
-            SET is_read = TRUE 
-            WHERE task_id = ? AND sender_id = ? AND receiver_id = ? AND is_read = FALSE
-        ");
-        $mark_read_stmt->execute([$conversation_task_id, $conversation_client_id, $user_id]);
-    } catch (PDOException $e) {
-        // Ignore errors for mark as read
     }
 }
 
@@ -92,6 +75,7 @@ try {
             u.fullname as client_name,
             u.email as client_email,
             u.rating as client_rating,
+            u.total_ratings,
             MAX(m.created_at) as last_message_time,
             COUNT(CASE WHEN m.receiver_id = ? AND m.is_read = FALSE THEN 1 END) as unread_count,
             (SELECT message FROM messages WHERE task_id = t.id AND (sender_id = ? OR receiver_id = ?) ORDER BY created_at DESC LIMIT 1) as last_message
@@ -134,7 +118,7 @@ try {
     if ($task_id > 0 && $client_id > 0) {
         // Verify access to this conversation
         $verify_conv_stmt = $pdo->prepare("
-            SELECT t.*, u.fullname as client_name, u.email as client_email, u.rating as client_rating
+            SELECT t.*, u.fullname as client_name, u.email as client_email, u.rating as client_rating, u.total_ratings
             FROM tasks t
             JOIN users u ON t.client_id = u.id
             LEFT JOIN applications a ON t.id = a.task_id AND a.helper_id = ?
@@ -187,6 +171,7 @@ try {
     $stats = $stats_stmt->fetch();
     
 } catch (PDOException $e) {
+    error_log("Helper messages query error: " . $e->getMessage());
     $conversations = [];
     $messages = [];
     $selected_conversation = null;
@@ -336,7 +321,7 @@ try {
         .main-content {
             flex: 1;
             margin-left: 240px;
-            overflow: hidden;
+            display: flex;
             transition: margin-left 0.3s ease;
             height: 100vh;
         }
@@ -347,9 +332,13 @@ try {
         
         .messages-container {
             display: flex;
-            height: 100vh;
+            width: 100%;
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
+            margin: 20px;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
         }
         
         /* Left Sidebar - Conversations */
@@ -608,7 +597,7 @@ try {
         
         .task-info-header {
             display: flex;
-            justify-content: between;
+            justify-content: space-between;
             align-items: center;
             margin-bottom: 12px;
         }
@@ -652,10 +641,6 @@ try {
             padding: 24px;
             overflow-y: auto;
             background: #f8fafc;
-        }
-        
-        .message-group {
-            margin-bottom: 24px;
         }
         
         .message-date {
@@ -880,396 +865,6 @@ try {
                 grid-template-columns: 1fr;
             }
         }
-        
-        /* Header */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 32px;
-        }
-        
-        .greeting {
-            color: white;
-            font-size: 32px;
-            font-weight: 700;
-        }
-        
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-        
-        .header-btn {
-            width: 40px;
-            height: 40px;
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            border-radius: 12px;
-            color: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.2s;
-        }
-        
-        .header-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-        
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 12px;
-            background: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            color: #1a1a1a;
-            cursor: pointer;
-        }
-        .notification-bell {
-    position: relative;
-    cursor: pointer;
-}
-
-.notification-badge {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    background: #ef4444;
-    color: white;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 2px 6px;
-    border-radius: 10px;
-    min-width: 18px;
-    text-align: center;
-    animation: pulse 2s infinite;
-}
-
-.notification-badge.hidden {
-    display: none;
-}
-
-/* Notification Dropdown */
-.notification-dropdown {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    width: 380px;
-    max-height: 480px;
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-    border: 1px solid #e2e8f0;
-    z-index: 1000;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-10px);
-    transition: all 0.3s ease;
-}
-
-.notification-dropdown.active {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-}
-
-.notification-header {
-    padding: 20px 24px 16px;
-    border-bottom: 1px solid #f1f5f9;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.notification-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: #1a1a1a;
-}
-
-.notification-actions {
-    display: flex;
-    gap: 8px;
-}
-
-.notification-action-btn {
-    padding: 6px 12px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 12px;
-    color: #64748b;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.notification-action-btn:hover {
-    background: #e2e8f0;
-}
-
-.notification-list {
-    max-height: 400px;
-    overflow-y: auto;
-}
-
-.notification-item {
-    padding: 16px 24px;
-    border-bottom: 1px solid #f1f5f9;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-}
-
-.notification-item:hover {
-    background: #f8fafc;
-}
-
-.notification-item.unread {
-    background: #eff6ff;
-    border-left: 4px solid #3b82f6;
-}
-
-.notification-item.unread::before {
-    content: '';
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    width: 8px;
-    height: 8px;
-    background: #3b82f6;
-    border-radius: 50%;
-}
-
-.notification-content {
-    display: flex;
-    gap: 12px;
-}
-
-.notification-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.notification-icon.application {
-    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-}
-
-.notification-icon.message {
-    background: linear-gradient(135deg, #10b981, #059669);
-}
-
-.notification-icon.task_status {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
-}
-
-.notification-icon.review {
-    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-}
-
-.notification-text {
-    flex: 1;
-}
-
-.notification-message {
-    font-size: 14px;
-    color: #1a1a1a;
-    line-height: 1.4;
-    margin-bottom: 4px;
-}
-
-.notification-meta {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.notification-time {
-    font-size: 12px;
-    color: #64748b;
-}
-
-.notification-delete {
-    background: none;
-    border: none;
-    color: #64748b;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    opacity: 0;
-    transition: all 0.2s;
-}
-
-.notification-item:hover .notification-delete {
-    opacity: 1;
-}
-
-.notification-delete:hover {
-    background: #fef2f2;
-    color: #ef4444;
-}
-
-.notification-empty {
-    padding: 40px 24px;
-    text-align: center;
-    color: #64748b;
-}
-
-.notification-empty-icon {
-    width: 48px;
-    height: 48px;
-    background: #f1f5f9;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 16px;
-}
-
-.notification-footer {
-    padding: 16px 24px;
-    border-top: 1px solid #f1f5f9;
-    text-align: center;
-}
-
-.view-all-btn {
-    color: #3b82f6;
-    font-size: 14px;
-    font-weight: 600;
-    text-decoration: none;
-    padding: 8px 16px;
-    border-radius: 8px;
-    transition: all 0.2s;
-}
-
-.view-all-btn:hover {
-    background: #eff6ff;
-}
-
-/* Toast Notifications */
-.toast-container {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 10000;
-    pointer-events: none;
-}
-
-.toast {
-    background: white;
-    border-radius: 12px;
-    padding: 16px 20px;
-    margin-bottom: 12px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-    border-left: 4px solid #3b82f6;
-    min-width: 300px;
-    max-width: 400px;
-    opacity: 0;
-    transform: translateX(400px);
-    transition: all 0.3s ease;
-    pointer-events: auto;
-    position: relative;
-}
-
-.toast.show {
-    opacity: 1;
-    transform: translateX(0);
-}
-
-.toast.success {
-    border-left-color: #10b981;
-}
-
-.toast.error {
-    border-left-color: #ef4444;
-}
-
-.toast.warning {
-    border-left-color: #f59e0b;
-}
-
-.toast-content {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-}
-
-.toast-icon {
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-    margin-top: 2px;
-}
-
-.toast-text {
-    flex: 1;
-}
-
-.toast-title {
-    font-weight: 600;
-    color: #1a1a1a;
-    margin-bottom: 4px;
-    font-size: 14px;
-}
-
-.toast-message {
-    color: #64748b;
-    font-size: 13px;
-    line-height: 1.4;
-}
-
-.toast-close {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    background: none;
-    border: none;
-    color: #94a3b8;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    transition: all 0.2s;
-}
-
-.toast-close:hover {
-    background: #f1f5f9;
-    color: #64748b;
-}
-
-/* Pulse animation for notification badge */
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
-}
-
-@media (max-width: 768px) {
-    .notification-dropdown {
-        width: calc(100vw - 32px);
-        right: -100px;
-    }
-    
-    .toast-container {
-        top: 10px;
-        right: 10px;
-        left: 10px;
-    }
-    
-    .toast {
-        min-width: auto;
-        max-width: none;
-    }
-}
     </style>
 </head>
 <body>
@@ -1335,38 +930,19 @@ try {
                 </svg>
                 <span class="nav-text">Settings</span>
             </a>
+
+            <a href="logout.php" class="nav-item" style="margin-top: 16px; color: #ef4444;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+                <span class="nav-text">Logout</span>
+            </a>
         </aside>
         
         <!-- Main Content -->
         <main class="main-content" id="mainContent">
-            <!-- Header -->
-            <div class="header">
-    <h1 class="greeting">Good morning, <?php echo explode(' ', $fullname)[0]; ?>!</h1>
-    <div class="header-actions">
-        <button class="header-btn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                <line x1="16" y1="2" x2="16" y2="6"/>
-                <line x1="8" y1="2" x2="8" y2="6"/>
-                <line x1="3" y1="10" x2="21" y2="10"/>
-            </svg>
-        </button>
-        
-        <!-- Notification Bell -->
-        <div class="header-btn notification-bell" style="position: relative;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-            </svg>
-            <!-- Notification badge will be added by JavaScript -->
-        </div>
-        
-        <div class="user-avatar">
-            <?php echo strtoupper(substr($fullname, 0, 1)); ?>
-        </div>
-    </div>
-</div>
-
             <div class="messages-container">
                 <!-- Conversations Sidebar -->
                 <div class="conversations-sidebar" id="conversationsSidebar">
@@ -1734,6 +1310,16 @@ try {
             });
         }, 5000);
         
+        // Add spinning animation for loading states
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
+        
         // Mobile responsive - toggle conversations sidebar
         function toggleConversations() {
             const sidebar = document.getElementById('conversationsSidebar');
@@ -1750,16 +1336,6 @@ try {
                 }
             });
         }
-        
-        // Add spinning animation for loading states
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes spin {
-                from { transform: rotate(0deg); }
-                to { transform: rotate(360deg); }
-            }
-        `;
-        document.head.appendChild(style);
         
         // Add mobile back button for small screens
         if (window.innerWidth <= 768 && window.location.search.includes('task_id')) {
@@ -1783,12 +1359,11 @@ try {
                     z-index: 10;
                 `;
                 backButton.onclick = function() {
-                    window.location.href = 'messages.php';
+                    window.location.href = 'helper-messages.php';
                 };
                 chatHeader.appendChild(backButton);
             }
         }
     </script>
-    <script src="js/notifications.js"></script>
 </body>
 </html>

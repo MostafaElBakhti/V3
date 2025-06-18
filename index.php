@@ -52,7 +52,7 @@ require_once 'config.php';
     .logo {
       font-size: 32px; 
       font-weight: 800; 
-      color: var(--primary);
+      color: var(--secondary);
       letter-spacing: -1px;
     }
     
@@ -100,7 +100,7 @@ require_once 'config.php';
     .auth-buttons a {
       text-decoration: none; 
       padding: 12px 24px;
-      border-radius: 50px; 
+      border-radius: 15px; 
       font-weight: 600;
       font-size: 14px;
       transition: all 0.3s ease;
@@ -315,7 +315,7 @@ require_once 'config.php';
     .hero-search {
       background: rgba(248, 250, 252, 0.95);
       backdrop-filter: blur(10px);
-      border-radius: 60px;
+      border-radius: 15px;
       padding: 8px;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
       margin: 40px auto;
@@ -326,10 +326,10 @@ require_once 'config.php';
       transition: all 0.3s ease;
     }
     
-    .hero-search:hover {
+    /* .hero-search:hover {
       transform: translateY(-2px);
       box-shadow: 0 25px 80px rgba(0, 0, 0, 0.15);
-    }
+    } */
     
     .search-input {
       flex: 1;
@@ -370,7 +370,7 @@ require_once 'config.php';
       color: var(--background);
       border: none;
       padding: 18px 30px;
-      border-radius: 50px;
+      border-radius: 15px;
       font-size: 16px;
       font-weight: 600;
       cursor: pointer;
@@ -398,7 +398,7 @@ require_once 'config.php';
       padding: 16px 32px; 
       font-size: 16px; 
       font-weight: 600;
-      border-radius: 50px; 
+      border-radius: 15px; 
       transition: all 0.3s ease;
       white-space: nowrap;
       position: relative;
@@ -904,7 +904,7 @@ require_once 'config.php';
     .footer-brand {
       font-size: 1.8rem;
       font-weight: 800;
-      color: var(--primary);
+      color: var(--secondary);
     }
 
     .footer-links {
@@ -1287,26 +1287,6 @@ require_once 'config.php';
           <a href="register.php?type=client" class="post-task">Post a Task</a>
           <a href="register.php?type=helper" class="find-work">Find Work</a>
         <?php endif; ?>
-      </div>
-      
-      <!-- Stats -->
-      <div class="hero-stats">
-        <div class="stat-item">
-          <div class="stat-number">10K+</div>
-          <div class="stat-label">Active Helpers</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-number">25K+</div>
-          <div class="stat-label">Tasks Completed</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-number">4.9★</div>
-          <div class="stat-label">Average Rating</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-number">50+</div>
-          <div class="stat-label">Cities</div>
-        </div>
       </div>
     </div>
   </section>
