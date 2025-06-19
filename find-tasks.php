@@ -1,4 +1,5 @@
 <?php
+// Simple Find Tasks Page - Educational Version
 require_once 'config.php';
 
 // Check if user is logged in and is a helper
@@ -6,121 +7,74 @@ if (!isLoggedIn() || $_SESSION['user_type'] !== 'helper') {
     redirect('login.php');
 }
 
-// Get user data
+// Get user data from session
 $user_id = $_SESSION['user_id'];
 $fullname = $_SESSION['fullname'];
 
-// Get filter parameters
+// Get simple filters from URL
 $search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
 $location_filter = isset($_GET['location']) ? trim($_GET['location']) : '';
-$min_budget = isset($_GET['min_budget']) ? floatval($_GET['min_budget']) : 0;
-$max_budget = isset($_GET['max_budget']) ? floatval($_GET['max_budget']) : 10000;
-$sort_by = isset($_GET['sort']) ? $_GET['sort'] : 'created_at';
-$sort_order = isset($_GET['order']) && $_GET['order'] === 'asc' ? 'ASC' : 'DESC';
 
-// Validate sort parameters
-$allowed_sorts = ['created_at', 'scheduled_time', 'budget', 'title'];
-if (!in_array($sort_by, $allowed_sorts)) {
-    $sort_by = 'created_at';
-}
-
-// Build the query
-$where_conditions = [
-    't.status = ?',
-    't.client_id != ?',
-    't.id NOT IN (SELECT DISTINCT task_id FROM applications WHERE helper_id = ? AND status IN (?, ?))'
-];
-$params = ['open', $user_id, $user_id, 'pending', 'accepted'];
-
-// Add search filter
-if (!empty($search_query)) {
-    $where_conditions[] = '(t.title LIKE ? OR t.description LIKE ?)';
-    $search_param = '%' . $search_query . '%';
-    $params[] = $search_param;
-    $params[] = $search_param;
-}
-
-// Add location filter
-if (!empty($location_filter)) {
-    $where_conditions[] = 't.location LIKE ?';
-    $params[] = '%' . $location_filter . '%';
-}
-
-// Add budget filters
-if ($min_budget > 0) {
-    $where_conditions[] = 't.budget >= ?';
-    $params[] = $min_budget;
-}
-
-if ($max_budget < 10000) {
-    $where_conditions[] = 't.budget <= ?';
-    $params[] = $max_budget;
-}
-
-$where_clause = 'WHERE ' . implode(' AND ', $where_conditions);
+// Initialize default values
+$tasks = [];
+$total_available = 0;
+$min_budget = 0;
+$max_budget = 0;
+$avg_budget = 0;
 
 try {
-    // Get tasks with client details and application counts
-    $stmt = $pdo->prepare("
-        SELECT 
-            t.*,
-            u.fullname as client_name,
-            u.email as client_email,
-            u.rating as client_rating,
-            (SELECT COUNT(*) FROM applications WHERE task_id = t.id) as total_applications,
-            (SELECT COUNT(*) FROM applications WHERE task_id = t.id AND status = 'pending') as pending_applications
-        FROM tasks t
-        JOIN users u ON t.client_id = u.id
-        $where_clause
-        ORDER BY t.$sort_by $sort_order
-        LIMIT 50
-    ");
+    // 1. Build simple query for available tasks
+    $sql = "SELECT t.*, u.fullname as client_name 
+            FROM tasks t 
+            JOIN users u ON t.client_id = u.id 
+            WHERE t.status = 'open' 
+            AND t.client_id != ?";
+    $params = [$user_id];
+
+    // Add search filter if provided
+    if (!empty($search_query)) {
+        $sql .= " AND (t.title LIKE ? OR t.description LIKE ?)";
+        $search_param = '%' . $search_query . '%';
+        $params[] = $search_param;
+        $params[] = $search_param;
+    }
+
+    // Add location filter if provided
+    if (!empty($location_filter)) {
+        $sql .= " AND t.location LIKE ?";
+        $params[] = '%' . $location_filter . '%';
+    }
+
+    // Order by newest first
+    $sql .= " ORDER BY t.created_at DESC LIMIT 20";
+
+    // Execute query
+    $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $tasks = $stmt->fetchAll();
 
-    // Get task statistics for filters
-    $stats_stmt = $pdo->prepare("
-        SELECT 
-            COUNT(*) as total_available,
-            MIN(budget) as min_budget_available,
-            MAX(budget) as max_budget_available,
-            AVG(budget) as avg_budget
-        FROM tasks t
-        WHERE t.status = 'open' 
-        AND t.client_id != ?
-        AND t.id NOT IN (
-            SELECT DISTINCT task_id 
-            FROM applications 
-            WHERE helper_id = ? 
-            AND status IN ('pending', 'accepted')
-        )
-    ");
-    $stats_stmt->execute([$user_id, $user_id]);
-    $task_stats = $stats_stmt->fetch();
+    // 2. For each task, get application count (simple way)
+    foreach ($tasks as &$task) {
+        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM applications WHERE task_id = ?");
+        $stmt->execute([$task['id']]);
+        $task['total_applications'] = $stmt->fetch()['count'];
+    }
 
-    // Get popular locations
-    $locations_stmt = $pdo->prepare("
-        SELECT t.location, COUNT(*) as task_count
-        FROM tasks t
-        WHERE t.status = 'open' 
-        AND t.client_id != ?
-        AND t.id NOT IN (
-            SELECT DISTINCT task_id 
-            FROM applications 
-            WHERE helper_id = ? 
-            AND status IN ('pending', 'accepted')
-        )
-        GROUP BY t.location
-        ORDER BY task_count DESC
-        LIMIT 10
-    ");
-    $locations_stmt->execute([$user_id, $user_id]);
-    $popular_locations = $locations_stmt->fetchAll();
+    // 3. Get basic statistics
+    $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tasks WHERE status = 'open' AND client_id != ?");
+    $stmt->execute([$user_id]);
+    $total_available = $stmt->fetch()['count'];
+
+    $stmt = $pdo->prepare("SELECT MIN(budget) as min_budget, MAX(budget) as max_budget, AVG(budget) as avg_budget FROM tasks WHERE status = 'open' AND client_id != ?");
+    $stmt->execute([$user_id]);
+    $budget_stats = $stmt->fetch();
+    $min_budget = $budget_stats['min_budget'] ? $budget_stats['min_budget'] : 0;
+    $max_budget = $budget_stats['max_budget'] ? $budget_stats['max_budget'] : 0;
+    $avg_budget = $budget_stats['avg_budget'] ? $budget_stats['avg_budget'] : 0;
 
 } catch (PDOException $e) {
-    $tasks = [];
-    $task_stats = ['total_available' => 0, 'min_budget_available' => 0, 'max_budget_available' => 0, 'avg_budget' => 0];
-    $popular_locations = [];
+    // If error, keep default values
+    error_log("Find Tasks error: " . $e->getMessage());
 }
 ?>
 <!DOCTYPE html>
@@ -275,6 +229,39 @@ try {
             margin-left: 80px;
         }
         
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+        
+        .greeting {
+            color: white;
+            font-size: 32px;
+            font-weight: 700;
+        }
+        
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: #1a1a1a;
+            cursor: pointer;
+        }
+        
         /* Page Header */
         .page-header {
             background: rgba(255, 255, 255, 0.95);
@@ -346,10 +333,6 @@ try {
             padding: 24px;
         }
         
-        .search-section {
-            margin-bottom: 20px;
-        }
-        
         .search-box {
             position: relative;
             margin-bottom: 16px;
@@ -381,7 +364,7 @@ try {
         
         .filters-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr auto auto;
+            grid-template-columns: 1fr 1fr auto;
             gap: 16px;
             align-items: end;
         }
@@ -398,8 +381,7 @@ try {
             font-size: 14px;
         }
         
-        .filter-input,
-        .filter-select {
+        .filter-input {
             padding: 12px 16px;
             border: 2px solid #e2e8f0;
             border-radius: 12px;
@@ -408,17 +390,9 @@ try {
             transition: all 0.2s;
         }
         
-        .filter-input:focus,
-        .filter-select:focus {
+        .filter-input:focus {
             outline: none;
             border-color: #10b981;
-        }
-        
-        .budget-range {
-            display: grid;
-            grid-template-columns: 1fr auto 1fr;
-            gap: 8px;
-            align-items: center;
         }
         
         .filter-actions {
@@ -437,6 +411,7 @@ try {
             display: flex;
             align-items: center;
             gap: 8px;
+            text-decoration: none;
         }
         
         .btn-primary {
@@ -454,42 +429,7 @@ try {
             transform: translateY(-1px);
         }
         
-        /* Popular Locations */
-        .popular-locations {
-            margin-top: 16px;
-        }
-        
-        .locations-label {
-            font-size: 14px;
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 8px;
-        }
-        
-        .location-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        
-        .location-tag {
-            padding: 6px 12px;
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 20px;
-            font-size: 12px;
-            color: #64748b;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .location-tag:hover {
-            background: #10b981;
-            color: white;
-            border-color: #10b981;
-        }
-        
-        /* Tasks Grid */
+        /* Tasks Container */
         .tasks-container {
             margin-top: 32px;
         }
@@ -510,41 +450,6 @@ try {
         .tasks-count {
             color: rgba(255, 255, 255, 0.8);
             font-size: 16px;
-        }
-        
-        .sort-controls {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-        
-        .sort-label {
-            color: rgba(255, 255, 255, 0.8);
-            font-size: 14px;
-            margin-right: 8px;
-        }
-        
-        .sort-select {
-            padding: 8px 12px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            font-size: 14px;
-        }
-        
-        .sort-toggle {
-            padding: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .sort-toggle:hover {
-            background: rgba(255, 255, 255, 0.2);
         }
         
         .tasks-grid {
@@ -665,28 +570,6 @@ try {
             margin-bottom: 4px;
         }
         
-        .client-rating {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .stars {
-            display: flex;
-            gap: 2px;
-        }
-        
-        .star {
-            width: 14px;
-            height: 14px;
-            color: #fbbf24;
-        }
-        
-        .rating-text {
-            font-size: 14px;
-            color: #64748b;
-        }
-        
         .task-badges {
             display: flex;
             gap: 8px;
@@ -701,11 +584,6 @@ try {
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-        }
-        
-        .badge-urgent {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            color: white;
         }
         
         .badge-new {
@@ -752,18 +630,6 @@ try {
         .task-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-        }
-        
-        .applications-indicator {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(239, 68, 68, 0.9);
-            color: white;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
         }
         
         /* Empty State */
@@ -849,396 +715,6 @@ try {
                 align-items: flex-start;
             }
         }
-        
-        /* Header */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 32px;
-        }
-        
-        .greeting {
-            color: white;
-            font-size: 32px;
-            font-weight: 700;
-        }
-        
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-        
-        .header-btn {
-            width: 40px;
-            height: 40px;
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            border-radius: 12px;
-            color: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.2s;
-        }
-        
-        .header-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-        
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 12px;
-            background: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            color: #1a1a1a;
-            cursor: pointer;
-        }
-        .notification-bell {
-    position: relative;
-    cursor: pointer;
-}
-
-.notification-badge {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    background: #ef4444;
-    color: white;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 2px 6px;
-    border-radius: 10px;
-    min-width: 18px;
-    text-align: center;
-    animation: pulse 2s infinite;
-}
-
-.notification-badge.hidden {
-    display: none;
-}
-
-/* Notification Dropdown */
-.notification-dropdown {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    width: 380px;
-    max-height: 480px;
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-    border: 1px solid #e2e8f0;
-    z-index: 1000;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-10px);
-    transition: all 0.3s ease;
-}
-
-.notification-dropdown.active {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-}
-
-.notification-header {
-    padding: 20px 24px 16px;
-    border-bottom: 1px solid #f1f5f9;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.notification-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: #1a1a1a;
-}
-
-.notification-actions {
-    display: flex;
-    gap: 8px;
-}
-
-.notification-action-btn {
-    padding: 6px 12px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 12px;
-    color: #64748b;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.notification-action-btn:hover {
-    background: #e2e8f0;
-}
-
-.notification-list {
-    max-height: 400px;
-    overflow-y: auto;
-}
-
-.notification-item {
-    padding: 16px 24px;
-    border-bottom: 1px solid #f1f5f9;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-}
-
-.notification-item:hover {
-    background: #f8fafc;
-}
-
-.notification-item.unread {
-    background: #eff6ff;
-    border-left: 4px solid #3b82f6;
-}
-
-.notification-item.unread::before {
-    content: '';
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    width: 8px;
-    height: 8px;
-    background: #3b82f6;
-    border-radius: 50%;
-}
-
-.notification-content {
-    display: flex;
-    gap: 12px;
-}
-
-.notification-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.notification-icon.application {
-    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-}
-
-.notification-icon.message {
-    background: linear-gradient(135deg, #10b981, #059669);
-}
-
-.notification-icon.task_status {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
-}
-
-.notification-icon.review {
-    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-}
-
-.notification-text {
-    flex: 1;
-}
-
-.notification-message {
-    font-size: 14px;
-    color: #1a1a1a;
-    line-height: 1.4;
-    margin-bottom: 4px;
-}
-
-.notification-meta {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.notification-time {
-    font-size: 12px;
-    color: #64748b;
-}
-
-.notification-delete {
-    background: none;
-    border: none;
-    color: #64748b;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    opacity: 0;
-    transition: all 0.2s;
-}
-
-.notification-item:hover .notification-delete {
-    opacity: 1;
-}
-
-.notification-delete:hover {
-    background: #fef2f2;
-    color: #ef4444;
-}
-
-.notification-empty {
-    padding: 40px 24px;
-    text-align: center;
-    color: #64748b;
-}
-
-.notification-empty-icon {
-    width: 48px;
-    height: 48px;
-    background: #f1f5f9;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 16px;
-}
-
-.notification-footer {
-    padding: 16px 24px;
-    border-top: 1px solid #f1f5f9;
-    text-align: center;
-}
-
-.view-all-btn {
-    color: #3b82f6;
-    font-size: 14px;
-    font-weight: 600;
-    text-decoration: none;
-    padding: 8px 16px;
-    border-radius: 8px;
-    transition: all 0.2s;
-}
-
-.view-all-btn:hover {
-    background: #eff6ff;
-}
-
-/* Toast Notifications */
-.toast-container {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 10000;
-    pointer-events: none;
-}
-
-.toast {
-    background: white;
-    border-radius: 12px;
-    padding: 16px 20px;
-    margin-bottom: 12px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-    border-left: 4px solid #3b82f6;
-    min-width: 300px;
-    max-width: 400px;
-    opacity: 0;
-    transform: translateX(400px);
-    transition: all 0.3s ease;
-    pointer-events: auto;
-    position: relative;
-}
-
-.toast.show {
-    opacity: 1;
-    transform: translateX(0);
-}
-
-.toast.success {
-    border-left-color: #10b981;
-}
-
-.toast.error {
-    border-left-color: #ef4444;
-}
-
-.toast.warning {
-    border-left-color: #f59e0b;
-}
-
-.toast-content {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-}
-
-.toast-icon {
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-    margin-top: 2px;
-}
-
-.toast-text {
-    flex: 1;
-}
-
-.toast-title {
-    font-weight: 600;
-    color: #1a1a1a;
-    margin-bottom: 4px;
-    font-size: 14px;
-}
-
-.toast-message {
-    color: #64748b;
-    font-size: 13px;
-    line-height: 1.4;
-}
-
-.toast-close {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    background: none;
-    border: none;
-    color: #94a3b8;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    transition: all 0.2s;
-}
-
-.toast-close:hover {
-    background: #f1f5f9;
-    color: #64748b;
-}
-
-/* Pulse animation for notification badge */
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
-}
-
-@media (max-width: 768px) {
-    .notification-dropdown {
-        width: calc(100vw - 32px);
-        right: -100px;
-    }
-    
-    .toast-container {
-        top: 10px;
-        right: 10px;
-        left: 10px;
-    }
-    
-    .toast {
-        min-width: auto;
-        max-width: none;
-    }
-}
     </style>
 </head>
 <body>
@@ -1321,7 +797,6 @@ try {
             <div class="header">
                 <h1 class="greeting">Good morning, <?php echo explode(' ', $fullname)[0]; ?>!</h1>
                 <div class="header-actions">
-                    
                     <div class="user-avatar">
                         <?php echo strtoupper(substr($fullname, 0, 1)); ?>
                     </div>
@@ -1345,94 +820,61 @@ try {
                 <!-- Task Statistics -->
                 <div class="task-stats-banner">
                     <div class="stat-item">
-                        <div class="stat-number"><?php echo $task_stats['total_available']; ?></div>
+                        <div class="stat-number"><?php echo $total_available; ?></div>
                         <div class="stat-label">Available Tasks</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number">$<?php echo number_format($task_stats['avg_budget'], 0); ?></div>
+                        <div class="stat-number">$<?php echo number_format($avg_budget, 0); ?></div>
                         <div class="stat-label">Average Budget</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number">$<?php echo number_format($task_stats['min_budget_available']); ?></div>
+                        <div class="stat-number">$<?php echo number_format($min_budget); ?></div>
                         <div class="stat-label">Min Budget</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number">$<?php echo number_format($task_stats['max_budget_available']); ?></div>
+                        <div class="stat-number">$<?php echo number_format($max_budget); ?></div>
                         <div class="stat-label">Max Budget</div>
                     </div>
                 </div>
                 
                 <!-- Search & Filters -->
                 <div class="search-filters">
-                    <form method="GET" action="" id="searchForm">
-                        <div class="search-section">
-                            <div class="search-box">
-                                <svg class="search-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="11" cy="11" r="8"/>
-                                    <path d="m21 21-4.35-4.35"/>
-                                </svg>
-                                <input type="text" class="search-input" name="search" 
-                                       placeholder="Search tasks by title, description, or keywords..." 
-                                       value="<?php echo htmlspecialchars($search_query); ?>">
-                            </div>
-                            
-                            <div class="filters-grid">
-                                <div class="filter-group">
-                                    <label class="filter-label">Location</label>
-                                    <input type="text" class="filter-input" name="location" 
-                                           placeholder="Enter city or area..." 
-                                           value="<?php echo htmlspecialchars($location_filter); ?>">
-                                </div>
-                                
-                                <div class="filter-group">
-                                    <label class="filter-label">Budget Range</label>
-                                    <div class="budget-range">
-                                        <input type="number" class="filter-input" name="min_budget" 
-                                               placeholder="Min" min="0" max="10000" 
-                                               value="<?php echo $min_budget > 0 ? $min_budget : ''; ?>">
-                                        <span style="color: #64748b;">to</span>
-                                        <input type="number" class="filter-input" name="max_budget" 
-                                               placeholder="Max" min="0" max="10000" 
-                                               value="<?php echo $max_budget < 10000 ? $max_budget : ''; ?>">
-                                    </div>
-                                </div>
-                                
-                                <div class="filter-actions">
-                                    <button type="submit" class="filter-btn btn-primary">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <circle cx="11" cy="11" r="8"/>
-                                            <path d="m21 21-4.35-4.35"/>
-                                        </svg>
-                                        Search
-                                    </button>
-                                </div>
-                                
-                                <div class="filter-actions">
-                                    <a href="find-tasks.php" class="filter-btn btn-secondary">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M3 6h18"/>
-                                            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                                        </svg>
-                                        Clear
-                                    </a>
-                                </div>
-                            </div>
+                    <form method="GET" action="">
+                        <div class="search-box">
+                            <svg class="search-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/>
+                                <path d="m21 21-4.35-4.35"/>
+                            </svg>
+                            <input type="text" class="search-input" name="search" 
+                                   placeholder="Search tasks by title or description..." 
+                                   value="<?php echo htmlspecialchars($search_query); ?>">
                         </div>
                         
-                        <!-- Popular Locations -->
-                        <?php if (!empty($popular_locations)): ?>
-                        <div class="popular-locations">
-                            <div class="locations-label">Popular Locations:</div>
-                            <div class="location-tags">
-                                <?php foreach ($popular_locations as $location): ?>
-                                    <div class="location-tag" onclick="selectLocation('<?php echo htmlspecialchars($location['location']); ?>')">
-                                        <?php echo htmlspecialchars($location['location']); ?> 
-                                        (<?php echo $location['task_count']; ?>)
-                                    </div>
-                                <?php endforeach; ?>
+                        <div class="filters-grid">
+                            <div class="filter-group">
+                                <label class="filter-label">Location</label>
+                                <input type="text" class="filter-input" name="location" 
+                                       placeholder="Enter city or area..." 
+                                       value="<?php echo htmlspecialchars($location_filter); ?>">
+                            </div>
+                            
+                            <div class="filter-actions">
+                                <button type="submit" class="filter-btn btn-primary">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="11" cy="11" r="8"/>
+                                        <path d="m21 21-4.35-4.35"/>
+                                    </svg>
+                                    Search
+                                </button>
+                                <a href="find-tasks.php" class="filter-btn btn-secondary">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 6h18"/>
+                                        <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                    Clear
+                                </a>
                             </div>
                         </div>
-                        <?php endif; ?>
                     </form>
                 </div>
             </div>
@@ -1441,29 +883,8 @@ try {
             <div class="tasks-container">
                 <div class="tasks-header">
                     <div>
-                        <h2 class="tasks-title">Available Opportunities</h2>
+                        <h2 class="tasks-title">Available Tasks</h2>
                         <p class="tasks-count"><?php echo count($tasks); ?> tasks found</p>
-                    </div>
-                    
-                    <div class="sort-controls">
-                        <span class="sort-label">Sort by:</span>
-                        <select class="sort-select" onchange="updateSort(this.value)">
-                            <option value="created_at" <?php echo $sort_by === 'created_at' ? 'selected' : ''; ?>>Date Posted</option>
-                            <option value="budget" <?php echo $sort_by === 'budget' ? 'selected' : ''; ?>>Budget</option>
-                            <option value="scheduled_time" <?php echo $sort_by === 'scheduled_time' ? 'selected' : ''; ?>>Scheduled Date</option>
-                            <option value="title" <?php echo $sort_by === 'title' ? 'selected' : ''; ?>>Title</option>
-                        </select>
-                        <button class="sort-toggle" onclick="toggleSortOrder()">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <?php if ($sort_order === 'DESC'): ?>
-                                    <path d="M7 13l3 3 3-3"/>
-                                    <path d="M7 6l3 3 3-3"/>
-                                <?php else: ?>
-                                    <path d="M7 17l3-3 3 3"/>
-                                    <path d="M7 7l3 3 3-3"/>
-                                <?php endif; ?>
-                            </svg>
-                        </button>
                     </div>
                 </div>
                 
@@ -1480,33 +901,24 @@ try {
                             </div>
                             <h3 class="empty-title">No Tasks Found</h3>
                             <p class="empty-description">
-                                <?php if (!empty($search_query) || !empty($location_filter) || $min_budget > 0 || $max_budget < 10000): ?>
-                                    No tasks match your current search criteria. Try adjusting your filters or search terms.
+                                <?php if (!empty($search_query) || !empty($location_filter)): ?>
+                                    No tasks match your search. Try different keywords or clear the filters.
                                 <?php else: ?>
                                     No tasks are currently available. Check back later for new opportunities!
                                 <?php endif; ?>
                             </p>
-                            <?php if (!empty($search_query) || !empty($location_filter) || $min_budget > 0 || $max_budget < 10000): ?>
+                            <?php if (!empty($search_query) || !empty($location_filter)): ?>
                                 <a href="find-tasks.php" class="task-btn task-btn-primary" style="max-width: 200px; margin: 0 auto;">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M3 6h18"/>
-                                        <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                                    </svg>
-                                    Clear All Filters
+                                    Clear Filters
                                 </a>
                             <?php endif; ?>
                         </div>
                     <?php else: ?>
                         <?php foreach ($tasks as $task): ?>
                             <div class="task-card">
-                                <?php if ($task['pending_applications'] > 3): ?>
-                                    <div class="applications-indicator">
-                                        🔥 <?php echo $task['total_applications']; ?> applications
-                                    </div>
-                                <?php endif; ?>
-                                
                                 <div class="task-badges">
                                     <?php 
+                                    // Check if task is new (created within 24 hours)
                                     $created_hours_ago = (time() - strtotime($task['created_at'])) / 3600;
                                     ?>
                                     
@@ -1514,18 +926,24 @@ try {
                                         <span class="task-badge badge-new">New</span>
                                     <?php endif; ?>
                                     
-                                    <?php if ($task['total_applications'] > 5): ?>
+                                    <?php if ($task['total_applications'] > 3): ?>
                                         <span class="task-badge badge-popular">Popular</span>
                                     <?php endif; ?>
                                 </div>
                                 
                                 <div class="task-header">
                                     <h3 class="task-title"><?php echo htmlspecialchars($task['title']); ?></h3>
-                                    <span class="task-status">Open</span>
+                                    <div>
+                                        <div class="task-budget">$<?php echo number_format($task['budget'], 2); ?></div>
+                                        <div class="budget-label">Budget</div>
+                                    </div>
                                 </div>
                                 
                                 <p class="task-description">
-                                    <?php echo htmlspecialchars(substr($task['description'], 0, 200)) . (strlen($task['description']) > 200 ? '...' : ''); ?>
+                                    <?php 
+                                    $description = htmlspecialchars($task['description']);
+                                    echo strlen($description) > 200 ? substr($description, 0, 200) . '...' : $description;
+                                    ?>
                                 </p>
                                 
                                 <div class="task-meta">
@@ -1578,21 +996,6 @@ try {
                                     </div>
                                     <div class="client-info">
                                         <div class="client-name"><?php echo htmlspecialchars($task['client_name']); ?></div>
-                                        <div class="client-rating">
-                                            <div class="stars">
-                                                <?php 
-                                                $rating = $task['client_rating'] ? floatval($task['client_rating']) : 0;
-                                                for ($i = 1; $i <= 5; $i++): 
-                                                ?>
-                                                    <svg class="star" viewBox="0 0 24 24" fill="<?php echo $i <= $rating ? 'currentColor' : 'none'; ?>" stroke="currentColor" stroke-width="2">
-                                                        <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
-                                                    </svg>
-                                                <?php endfor; ?>
-                                            </div>
-                                            <span class="rating-text">
-                                                <?php echo $rating > 0 ? number_format($rating, 1) . ' rating' : 'New client'; ?>
-                                            </span>
-                                        </div>
                                     </div>
                                 </div>
                                 
@@ -1627,68 +1030,7 @@ try {
             sidebar.classList.toggle('collapsed');
             sidebar.classList.toggle('expanded');
             mainContent.classList.toggle('collapsed');
-            
-            // Update toggle icon
-            const toggleBtn = sidebar.querySelector('.sidebar-toggle svg');
-            if (sidebar.classList.contains('collapsed')) {
-                toggleBtn.innerHTML = '<path d="m9 18 6-6-6-6"/>';
-            } else {
-                toggleBtn.innerHTML = '<path d="m15 18-6-6 6-6"/>';
-            }
         }
-        
-        function selectLocation(location) {
-            document.querySelector('input[name="location"]').value = location;
-            document.getElementById('searchForm').submit();
-        }
-        
-        function updateSort(sortBy) {
-            const currentUrl = new URL(window.location);
-            currentUrl.searchParams.set('sort', sortBy);
-            window.location.href = currentUrl.toString();
-        }
-        
-        function toggleSortOrder() {
-            const currentUrl = new URL(window.location);
-            const currentOrder = new URLSearchParams(window.location.search).get('order') || 'desc';
-            const newOrder = currentOrder === 'desc' ? 'asc' : 'desc';
-            currentUrl.searchParams.set('order', newOrder);
-            window.location.href = currentUrl.toString();
-        }
-        
-        // Auto-submit search on input (debounced)
-        let searchTimeout;
-        document.querySelector('.search-input').addEventListener('input', function() {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                if (this.value.length >= 3 || this.value.length === 0) {
-                    document.getElementById('searchForm').submit();
-                }
-            }, 1000);
-        });
-        
-        // Keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
-            // Ctrl/Cmd + K to focus search
-            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-                e.preventDefault();
-                document.querySelector('.search-input').focus();
-            }
-            
-            // Escape to clear search
-            if (e.key === 'Escape' && document.activeElement === document.querySelector('.search-input')) {
-                document.querySelector('.search-input').value = '';
-                document.getElementById('searchForm').submit();
-            }
-        });
-        
-        // Auto-refresh every 5 minutes for new tasks
-        setInterval(() => {
-            if (!document.querySelector('.search-input').value) {
-                location.reload();
-            }
-        }, 300000);
     </script>
-    <script src="js/notifications.js"></script>
 </body>
 </html>

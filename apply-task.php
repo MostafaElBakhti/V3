@@ -16,78 +16,61 @@ if (!$task_id) {
 $user_id = $_SESSION['user_id'];
 $fullname = $_SESSION['fullname'];
 
-// Handle form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    try {
-        $proposal = trim($_POST['proposal'] ?? '');
-        $bid_amount = floatval($_POST['bid_amount'] ?? 0);
-        
-        // Validation
-        $errors = [];
-        
-        if (strlen($proposal) < 50) {
-            $errors[] = 'Proposal must be at least 50 characters long.';
-        }
-        
-        if ($bid_amount < 5) {
-            $errors[] = 'Bid amount must be at least $5.';
-        }
-        
-        // Check if task exists and is still open
-        $stmt = $pdo->prepare("SELECT * FROM tasks WHERE id = ? AND status = 'open'");
-        $stmt->execute([$task_id]);
-        $task = $stmt->fetch();
-        
-        if (!$task) {
-            $errors[] = 'Task not found or no longer accepting applications.';
-        }
-        
-        // Check if user already applied
-        $stmt = $pdo->prepare("SELECT id FROM applications WHERE task_id = ? AND helper_id = ?");
-        $stmt->execute([$task_id, $user_id]);
-        if ($stmt->fetch()) {
-            $errors[] = 'You have already applied to this task.';
-        }
-        
-        // Check if user is not the task creator
-        if ($task && $task['client_id'] == $user_id) {
-            $errors[] = 'You cannot apply to your own task.';
-        }
-        
-        if (empty($errors)) {
-            // Insert application
-            $stmt = $pdo->prepare("
-                INSERT INTO applications (task_id, helper_id, proposal, bid_amount, status, created_at) 
-                VALUES (?, ?, ?, ?, 'pending', NOW())
-            ");
+// Handle form submission (simplified)
+$errors = [];
+$success_message = '';
+
+if ($_POST) {
+    $proposal = trim($_POST['proposal']);
+    $bid_amount = $_POST['bid_amount'];
+    
+    // Simple validation
+    if (strlen($proposal) < 50) {
+        $errors[] = 'Proposal must be at least 50 characters long.';
+    }
+    
+    if ($bid_amount < 5) {
+        $errors[] = 'Bid amount must be at least $5.';
+    }
+    
+    if (empty($errors)) {
+        try {
+            // Check if task exists and is open
+            $stmt = $pdo->prepare("SELECT * FROM tasks WHERE id = ? AND status = 'open'");
+            $stmt->execute([$task_id]);
+            $task = $stmt->fetch();
             
-            if ($stmt->execute([$task_id, $user_id, $proposal, $bid_amount])) {
-                $_SESSION['success_message'] = 'Application submitted successfully! The client will review your proposal.';
-                redirect('helper-dashboard.php');
+            if (!$task) {
+                $errors[] = 'Task not found or no longer accepting applications.';
             } else {
-                $errors[] = 'Failed to submit application. Please try again.';
+                // Check if already applied
+                $stmt = $pdo->prepare("SELECT id FROM applications WHERE task_id = ? AND helper_id = ?");
+                $stmt->execute([$task_id, $user_id]);
+                if ($stmt->fetch()) {
+                    $errors[] = 'You have already applied to this task.';
+                } else {
+                    // Insert application
+                    $stmt = $pdo->prepare("INSERT INTO applications (task_id, helper_id, proposal, bid_amount, status, created_at) VALUES (?, ?, ?, ?, 'pending', NOW())");
+                    $stmt->execute([$task_id, $user_id, $proposal, $bid_amount]);
+                    
+                    $success_message = 'Application submitted successfully!';
+                    // Redirect after 2 seconds
+                    header("refresh:2;url=helper-dashboard.php");
+                }
             }
+        } catch (PDOException $e) {
+            $errors[] = 'Error submitting application. Please try again.';
         }
-    } catch (PDOException $e) {
-        error_log("Application submission error: " . $e->getMessage());
-        $errors[] = 'Database error occurred. Please try again.';
     }
 }
 
-// Get task details
+// Get task details (simplified)
 try {
     $stmt = $pdo->prepare("
-        SELECT 
-            t.*,
-            u.fullname as client_name,
-            u.rating as client_rating,
-            u.total_ratings as client_total_ratings,
-            COUNT(DISTINCT a.id) as total_applications
+        SELECT t.*, u.fullname as client_name, u.rating as client_rating
         FROM tasks t
         JOIN users u ON t.client_id = u.id
-        LEFT JOIN applications a ON t.id = a.task_id
         WHERE t.id = ?
-        GROUP BY t.id
     ");
     $stmt->execute([$task_id]);
     $task = $stmt->fetch();
@@ -102,12 +85,15 @@ try {
     $existing_application = $stmt->fetch();
     
     if ($existing_application) {
-        $_SESSION['info_message'] = 'You have already applied to this task.';
         redirect("task-details.php?id=$task_id");
     }
     
+    // Count total applications
+    $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM applications WHERE task_id = ?");
+    $stmt->execute([$task_id]);
+    $total_applications = $stmt->fetch()['total'];
+    
 } catch (PDOException $e) {
-    error_log("Task fetch error: " . $e->getMessage());
     redirect('helper-dashboard.php');
 }
 ?>
@@ -155,7 +141,6 @@ try {
         
         .back-btn:hover {
             background: rgba(255, 255, 255, 0.2);
-            transform: translateX(-4px);
         }
         
         .main-card {
@@ -301,34 +286,6 @@ try {
             line-height: 1.4;
         }
         
-        .pricing-guide {
-            background: #e0f2fe;
-            border: 1px solid #b3e5fc;
-            border-radius: 12px;
-            padding: 16px;
-            margin-top: 12px;
-        }
-        
-        .pricing-guide h4 {
-            color: #0277bd;
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-        
-        .pricing-guide p {
-            color: #01579b;
-            font-size: 13px;
-            line-height: 1.4;
-        }
-        
-        .character-count {
-            text-align: right;
-            font-size: 12px;
-            color: #666;
-            margin-top: 4px;
-        }
-        
         .alert {
             padding: 16px;
             border-radius: 12px;
@@ -340,6 +297,12 @@ try {
             background: #fee2e2;
             border: 1px solid #fecaca;
             color: #dc2626;
+        }
+        
+        .alert-success {
+            background: #dcfce7;
+            border: 1px solid #bbf7d0;
+            color: #166534;
         }
         
         .alert-error ul {
@@ -387,34 +350,6 @@ try {
         
         .btn-secondary:hover {
             background: #e5e7eb;
-        }
-        
-        .tips-section {
-            background: #fff7ed;
-            border: 1px solid #fed7aa;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 24px;
-        }
-        
-        .tips-title {
-            color: #c2410c;
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .tips-list {
-            color: #9a3412;
-            font-size: 14px;
-        }
-        
-        .tips-list li {
-            margin-bottom: 6px;
-            line-height: 1.4;
         }
         
         .competition-info {
@@ -484,10 +419,8 @@ try {
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                             <circle cx="9" cy="7" r="4"/>
-                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                         </svg>
-                        <?php echo $task['total_applications']; ?> other applications
+                        <?php echo $total_applications; ?> other applications
                     </div>
                 </div>
                 <div class="task-budget">
@@ -498,30 +431,12 @@ try {
             <!-- Competition Info -->
             <div class="competition-info">
                 <h3>🏆 Stand Out From the Competition</h3>
-                <p>There are <?php echo $task['total_applications']; ?> other applications. Make your proposal compelling!</p>
-            </div>
-            
-            <!-- Tips Section -->
-            <div class="tips-section">
-                <div class="tips-title">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"/>
-                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-                        <line x1="12" y1="17" x2="12.01" y2="17"/>
-                    </svg>
-                    Tips for a Great Proposal
-                </div>
-                <ul class="tips-list">
-                    <li>✓ Explain exactly how you'll complete the task</li>
-                    <li>✓ Mention any relevant experience or skills</li>
-                    <li>✓ Be specific about timing and availability</li>
-                    <li>✓ Ask clarifying questions if needed</li>
-                    <li>✓ Be professional but personable</li>
-                </ul>
+                <p>There are <?php echo $total_applications; ?> other applications. Make your proposal compelling!</p>
             </div>
             
             <!-- Application Form -->
-            <form method="POST" id="applicationForm">
+            <form method="POST">
+                <!-- Error Messages -->
                 <?php if (!empty($errors)): ?>
                 <div class="alert alert-error">
                     <strong>Please fix the following errors:</strong>
@@ -530,6 +445,14 @@ try {
                             <li><?php echo htmlspecialchars($error); ?></li>
                         <?php endforeach; ?>
                     </ul>
+                </div>
+                <?php endif; ?>
+                
+                <!-- Success Message -->
+                <?php if (!empty($success_message)): ?>
+                <div class="alert alert-success">
+                    <strong>Success!</strong> <?php echo htmlspecialchars($success_message); ?>
+                    <br><small>Redirecting to dashboard...</small>
                 </div>
                 <?php endif; ?>
                 
@@ -550,10 +473,10 @@ try {
                             required 
                             placeholder="Hi! I'm interested in helping with your task. Here's how I would approach it...
 
-• [Explain your approach]
-• [Mention relevant experience]
-• [Specify timing and availability]
-• [Ask any questions you have]
+• Explain your approach
+• Mention relevant experience
+• Specify timing and availability
+• Ask any questions you have
 
 I'm confident I can deliver quality work and would love to discuss this further with you."
                         ><?php echo isset($_POST['proposal']) ? htmlspecialchars($_POST['proposal']) : ''; ?></textarea>
@@ -582,7 +505,7 @@ I'm confident I can deliver quality work and would love to discuss this further 
                                 id="bid_amount" 
                                 name="bid_amount" 
                                 min="5" 
-                                max="<?php echo $task['budget'] * 1.5; ?>" 
+                                max="<?php echo $task['budget'] * 2; ?>" 
                                 step="1" 
                                 required
                                 value="<?php echo isset($_POST['bid_amount']) ? $_POST['bid_amount'] : ''; ?>"
@@ -591,15 +514,6 @@ I'm confident I can deliver quality work and would love to discuss this further 
                         </div>
                         <div class="help-text">
                             Enter your bid amount. Consider the client's budget of $<?php echo number_format($task['budget'], 2); ?> when pricing your services.
-                        </div>
-                        
-                        <div class="pricing-guide">
-                            <h4>💡 Pricing Strategy</h4>
-                            <p>
-                                <strong>Competitive:</strong> $<?php echo number_format($task['budget'] * 0.7, 0); ?> - $<?php echo number_format($task['budget'] * 0.85, 0); ?> 
-                                <strong>• Fair:</strong> $<?php echo number_format($task['budget'] * 0.9, 0); ?> - $<?php echo number_format($task['budget'], 0); ?> 
-                                <strong>• Premium:</strong> $<?php echo number_format($task['budget'] * 1.1, 0); ?> - $<?php echo number_format($task['budget'] * 1.3, 0); ?>
-                            </p>
                         </div>
                     </div>
                 </div>
@@ -620,7 +534,7 @@ I'm confident I can deliver quality work and would love to discuss this further 
     </div>
     
     <script>
-        // Character counter for proposal
+        // Simple character counter for proposal
         const proposalTextarea = document.getElementById('proposal');
         const charCount = document.getElementById('charCount');
         
@@ -642,92 +556,6 @@ I'm confident I can deliver quality work and would love to discuss this further 
         proposalTextarea.addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = Math.max(120, this.scrollHeight) + 'px';
-        });
-        
-        // Form validation
-        document.getElementById('applicationForm').addEventListener('submit', function(e) {
-            const proposal = proposalTextarea.value.trim();
-            const bidAmount = parseFloat(document.getElementById('bid_amount').value);
-            const maxBid = <?php echo $task['budget'] * 1.5; ?>;
-            
-            let isValid = true;
-            let errors = [];
-            
-            if (proposal.length < 50) {
-                errors.push('Proposal must be at least 50 characters long.');
-                isValid = false;
-            }
-            
-            if (bidAmount < 5) {
-                errors.push('Bid amount must be at least $5.');
-                isValid = false;
-            }
-            
-            if (bidAmount > maxBid) {
-                errors.push(`Bid amount cannot exceed $${maxBid.toFixed(2)}.`);
-                isValid = false;
-            }
-            
-            if (!isValid) {
-                e.preventDefault();
-                alert('Please fix the following errors:\n\n' + errors.join('\n'));
-                return false;
-            }
-            
-            // Confirm submission
-            const confirmMessage = `Are you sure you want to submit this application?\n\nYour bid: $${bidAmount.toFixed(2)}\nClient's budget: $<?php echo number_format($task['budget'], 2); ?>`;
-            
-            if (!confirm(confirmMessage)) {
-                e.preventDefault();
-                return false;
-            }
-            
-            // Disable submit button to prevent double submission
-            const submitBtn = this.querySelector('button[type="submit"]');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Submitting...';
-        });
-        
-        // Add spinning animation
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes spin {
-                from { transform: rotate(0deg); }
-                to { transform: rotate(360deg); }
-            }
-        `;
-        document.head.appendChild(style);
-        
-        // Smart bidding suggestions
-        const bidInput = document.getElementById('bid_amount');
-        const clientBudget = <?php echo $task['budget']; ?>;
-        
-        bidInput.addEventListener('input', function() {
-            const bid = parseFloat(this.value);
-            const pricingGuide = document.querySelector('.pricing-guide');
-            
-            if (bid > 0) {
-                let category = '';
-                let color = '';
-                
-                if (bid <= clientBudget * 0.85) {
-                    category = 'Competitive pricing - likely to win!';
-                    color = '#10b981';
-                } else if (bid <= clientBudget) {
-                    category = 'Fair pricing - good balance';
-                    color = '#3b82f6';
-                } else if (bid <= clientBudget * 1.3) {
-                    category = 'Premium pricing - justify your value';
-                    color = '#f59e0b';
-                } else {
-                    category = 'Very high - may be difficult to win';
-                    color = '#ef4444';
-                }
-                
-                pricingGuide.style.borderColor = color;
-                pricingGuide.querySelector('h4').style.color = color;
-                pricingGuide.querySelector('h4').textContent = `💡 ${category}`;
-            }
         });
     </script>
 </body>

@@ -1,118 +1,85 @@
 <?php
+// Simple Settings Page - Educational Version
 require_once 'config.php';
 
-// Check if user is logged in and is a helper
-if (!isLoggedIn() || $_SESSION['user_type'] !== 'helper') {
+// Check if user is logged in
+if (!isLoggedIn()) {
     redirect('login.php');
 }
+$user_type = $_SESSION['user_type'];
 
-// Get user data
+// Get user data from session
 $user_id = $_SESSION['user_id'];
 $fullname = $_SESSION['fullname'];
 
-// Handle form submissions
+// Handle simple form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     
     try {
-        switch ($action) {
-            case 'update_profile':
-                $new_fullname = trim($_POST['fullname']);
-                $new_email = trim($_POST['email']);
-                $new_bio = trim($_POST['bio']);
-                
-                // Validate inputs
-                if (empty($new_fullname) || empty($new_email)) {
-                    throw new Exception('Name and email are required.');
-                }
-                
-                if (!filter_var($new_email, FILTER_VALIDATE_EMAIL)) {
-                    throw new Exception('Please enter a valid email address.');
-                }
-                
-                // Check if email already exists (for other users)
-                $email_check = $pdo->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
-                $email_check->execute([$new_email, $user_id]);
-                if ($email_check->fetch()) {
-                    throw new Exception('This email address is already in use.');
-                }
-                
-                // Update profile
-                $update_stmt = $pdo->prepare("
-                    UPDATE users 
-                    SET fullname = ?, email = ?, bio = ?, updated_at = NOW() 
-                    WHERE id = ?
-                ");
-                $update_stmt->execute([$new_fullname, $new_email, $new_bio, $user_id]);
-                
-                // Update session
-                $_SESSION['fullname'] = $new_fullname;
-                
-                $success_message = "Profile updated successfully!";
-                break;
-                
-            case 'change_password':
-                $current_password = $_POST['current_password'];
-                $new_password = $_POST['new_password'];
-                $confirm_password = $_POST['confirm_password'];
-                
-                // Validate inputs
-                if (empty($current_password) || empty($new_password) || empty($confirm_password)) {
-                    throw new Exception('All password fields are required.');
-                }
-                
-                if ($new_password !== $confirm_password) {
-                    throw new Exception('New passwords do not match.');
-                }
-                
-                if (strlen($new_password) < 6) {
-                    throw new Exception('Password must be at least 6 characters long.');
-                }
-                
-                // Verify current password
-                $user_stmt = $pdo->prepare("SELECT password FROM users WHERE id = ?");
-                $user_stmt->execute([$user_id]);
-                $user_data = $user_stmt->fetch();
-                
-                if (!password_verify($current_password, $user_data['password'])) {
-                    throw new Exception('Current password is incorrect.');
-                }
-                
-                // Update password
-                $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
-                $update_stmt = $pdo->prepare("UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?");
-                $update_stmt->execute([$hashed_password, $user_id]);
-                
-                $success_message = "Password changed successfully!";
-                break;
-                
-            case 'update_preferences':
-                // For now, we'll just show success. In a real app, you'd save to a preferences table
-                $email_notifications = isset($_POST['email_notifications']) ? 1 : 0;
-                $sms_notifications = isset($_POST['sms_notifications']) ? 1 : 0;
-                $push_notifications = isset($_POST['push_notifications']) ? 1 : 0;
-                
-                // In a real application, you would save these to a user_preferences table
-                // For now, we'll just simulate success
-                $success_message = "Preferences updated successfully!";
-                break;
-                
-            case 'deactivate_account':
-                $password_confirm = $_POST['password_confirm'];
-                
-                // Verify password
-                $user_stmt = $pdo->prepare("SELECT password FROM users WHERE id = ?");
-                $user_stmt->execute([$user_id]);
-                $user_data = $user_stmt->fetch();
-                
-                if (!password_verify($password_confirm, $user_data['password'])) {
-                    throw new Exception('Password is incorrect.');
-                }
-                
-                // In a real app, you might set a status flag instead of deleting
-                // For now, we'll just show a confirmation
-                $success_message = "Account deactivation request submitted. Please contact support to complete the process.";
-                break;
+        if ($action === 'update_profile') {
+            $new_fullname = trim($_POST['fullname']);
+            $new_email = trim($_POST['email']);
+            $new_bio = trim($_POST['bio']);
+            
+            // Simple validation
+            if (empty($new_fullname) || empty($new_email)) {
+                throw new Exception('Name and email are required.');
+            }
+            
+            if (!filter_var($new_email, FILTER_VALIDATE_EMAIL)) {
+                throw new Exception('Please enter a valid email address.');
+            }
+            
+            // Check if email already exists for other users
+            $email_check = $pdo->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
+            $email_check->execute([$new_email, $user_id]);
+            if ($email_check->fetch()) {
+                throw new Exception('This email address is already in use.');
+            }
+            
+            // Update profile
+            $update_stmt = $pdo->prepare("UPDATE users SET fullname = ?, email = ?, bio = ? WHERE id = ?");
+            $update_stmt->execute([$new_fullname, $new_email, $new_bio, $user_id]);
+            
+            // Update session
+            $_SESSION['fullname'] = $new_fullname;
+            
+            $success_message = "Profile updated successfully!";
+            
+        } elseif ($action === 'change_password') {
+            $current_password = $_POST['current_password'];
+            $new_password = $_POST['new_password'];
+            $confirm_password = $_POST['confirm_password'];
+            
+            // Simple validation
+            if (empty($current_password) || empty($new_password) || empty($confirm_password)) {
+                throw new Exception('All password fields are required.');
+            }
+            
+            if ($new_password !== $confirm_password) {
+                throw new Exception('New passwords do not match.');
+            }
+            
+            if (strlen($new_password) < 6) {
+                throw new Exception('Password must be at least 6 characters long.');
+            }
+            
+            // Check current password
+            $user_stmt = $pdo->prepare("SELECT password FROM users WHERE id = ?");
+            $user_stmt->execute([$user_id]);
+            $user_data = $user_stmt->fetch();
+            
+            if (!password_verify($current_password, $user_data['password'])) {
+                throw new Exception('Current password is incorrect.');
+            }
+            
+            // Update password
+            $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+            $update_stmt = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
+            $update_stmt->execute([$hashed_password, $user_id]);
+            
+            $success_message = "Password changed successfully!";
         }
     } catch (Exception $e) {
         $error_message = $e->getMessage();
@@ -121,17 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Get current user data
 try {
-    $stmt = $pdo->prepare("
-        SELECT u.*, 
-               COUNT(t.id) as total_jobs,
-               AVG(r.rating) as avg_rating,
-               COUNT(r.id) as total_reviews
-        FROM users u
-        LEFT JOIN tasks t ON u.id = t.helper_id AND t.status = 'completed'
-        LEFT JOIN reviews r ON u.id = r.reviewee_id
-        WHERE u.id = ?
-        GROUP BY u.id
-    ");
+    $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
     $stmt->execute([$user_id]);
     $user = $stmt->fetch();
     
@@ -357,19 +314,6 @@ try {
             margin-bottom: 4px;
         }
         
-        .user-stats {
-            display: flex;
-            gap: 16px;
-            font-size: 14px;
-            color: #64748b;
-        }
-        
-        .stat-item {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        
         /* Settings Navigation */
         .settings-nav {
             background: #f8fafc;
@@ -470,12 +414,6 @@ try {
             line-height: 1.5;
         }
         
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-        }
-        
         .form-help {
             font-size: 12px;
             color: #64748b;
@@ -517,16 +455,6 @@ try {
             background: #e2e8f0;
         }
         
-        .btn-danger {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            color: white;
-        }
-        
-        .btn-danger:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
-        }
-        
         /* Alerts */
         .alert {
             padding: 16px 20px;
@@ -556,142 +484,6 @@ try {
             flex-shrink: 0;
         }
         
-        /* Checkboxes */
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 16px;
-        }
-        
-        .checkbox {
-            width: 20px;
-            height: 20px;
-            border: 2px solid #e2e8f0;
-            border-radius: 4px;
-            position: relative;
-            cursor: pointer;
-        }
-        
-        .checkbox input {
-            opacity: 0;
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            cursor: pointer;
-        }
-        
-        .checkbox input:checked + .checkmark {
-            background: #8b5cf6;
-            border-color: #8b5cf6;
-        }
-        
-        .checkbox input:checked + .checkmark:after {
-            display: block;
-        }
-        
-        .checkmark {
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 16px;
-            width: 16px;
-            background: white;
-            border-radius: 2px;
-            transition: all 0.2s;
-        }
-        
-        .checkmark:after {
-            content: "";
-            position: absolute;
-            display: none;
-            left: 5px;
-            top: 2px;
-            width: 4px;
-            height: 8px;
-            border: solid white;
-            border-width: 0 2px 2px 0;
-            transform: rotate(45deg);
-        }
-        
-        .checkbox-label {
-            font-size: 14px;
-            color: #374151;
-            cursor: pointer;
-        }
-        
-        /* Danger Zone */
-        .danger-zone {
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-            border-radius: 16px;
-            padding: 24px;
-            margin-top: 32px;
-        }
-        
-        .danger-zone h3 {
-            color: #dc2626;
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-        
-        .danger-zone p {
-            color: #7f1d1d;
-            margin-bottom: 16px;
-            line-height: 1.5;
-        }
-        
-        /* Modal */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(8px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-        }
-        
-        .modal-overlay.active {
-            display: flex;
-        }
-        
-        .modal-content {
-            background: white;
-            border-radius: 20px;
-            padding: 32px;
-            width: 90%;
-            max-width: 400px;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
-        }
-        
-        .modal-header {
-            text-align: center;
-            margin-bottom: 24px;
-        }
-        
-        .modal-header h3 {
-            font-size: 20px;
-            font-weight: 600;
-            color: #1a1a1a;
-            margin-bottom: 8px;
-        }
-        
-        .modal-header p {
-            color: #64748b;
-        }
-        
-        .modal-actions {
-            display: flex;
-            gap: 12px;
-            margin-top: 24px;
-        }
-        
         /* Responsive */
         @media (max-width: 768px) {
             .main-content {
@@ -701,10 +493,6 @@ try {
             
             .main-content.collapsed {
                 margin-left: 80px;
-            }
-            
-            .form-row {
-                grid-template-columns: 1fr;
             }
             
             .user-summary {
@@ -741,54 +529,109 @@ try {
                     </svg>
                 </button>
             </div>
-            
-            <a href="helper-dashboard.php" class="nav-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                    <path d="m9 9 5 12 1.774-5.226L21 14 9 9z"/>
-                </svg>
-                <span class="nav-text">Dashboard</span>
-            </a>
-            
-            <a href="find-tasks.php" class="nav-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"/>
-                    <path d="m21 21-4.35-4.35"/>
-                </svg>
-                <span class="nav-text">Find Tasks</span>
-            </a>
-            
-            <a href="my-applications.php" class="nav-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14,2 14,8 20,8"/>
-                </svg>
-                <span class="nav-text">Applications</span>
-            </a>
-            
-            <a href="my-jobs.php" class="nav-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-                    <line x1="8" y1="21" x2="16" y2="21"/>
-                    <line x1="12" y1="17" x2="12" y2="21"/>
-                </svg>
-                <span class="nav-text">My Jobs</span>
-            </a>
-            
-            <a href="helper-messages.php" class="nav-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                </svg>
-                <span class="nav-text">Messages</span>
-            </a>
-            
-            <a href="settings.php" class="nav-item active">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="3"/>
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                </svg>
-                <span class="nav-text">Settings</span>
-            </a>
+            <?php if ($user_type === 'client'): ?>
+                <a href="client-dashboard.php" class="nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                        <path d="m9 9 5 12 1.774-5.226L21 14 9 9z"/>
+                    </svg>
+                    <span class="nav-text">Dashboard</span>
+                </a>
+                <a href="my-tasks.php" class="nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14,2 14,8 20,8"/>
+                    </svg>
+                    <span class="nav-text">My Tasks</span>
+                </a>
+                <a href="post-task.php" class="nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="16"/>
+                        <line x1="8" y1="12" x2="16" y2="12"/>
+                    </svg>
+                    <span class="nav-text">Post Task</span>
+                </a>
+                <a href="applications.php" class="nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                    </svg>
+                    <span class="nav-text">Applications</span>
+                </a>
+                <a href="messages.php" class="nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <span class="nav-text">Messages</span>
+                </a>
+                <a href="settings.php" class="nav-item active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                    <span class="nav-text">Settings</span>
+                </a>
+                <a href="logout.php" class="nav-item" style="margin-top: auto; color: #ef4444;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16,17 21,12 16,7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                    <span class="nav-text">Logout</span>
+                </a>
+            <?php else: ?>
+                <a href="helper-dashboard.php" class="nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                        <path d="m9 9 5 12 1.774-5.226L21 14 9 9z"/>
+                    </svg>
+                    <span class="nav-text">Dashboard</span>
+                </a>
+                <a href="find-tasks.php" class="nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <span class="nav-text">Find Tasks</span>
+                </a>
+                <a href="my-applications.php" class="nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14,2 14,8 20,8"/>
+                    </svg>
+                    <span class="nav-text">Applications</span>
+                </a>
+                <a href="my-jobs.php" class="nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                        <line x1="8" y1="21" x2="16" y2="21"/>
+                        <line x1="12" y1="17" x2="12" y2="21"/>
+                    </svg>
+                    <span class="nav-text">My Jobs</span>
+                </a>
+                <a href="helper-messages.php" class="nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <span class="nav-text">Messages</span>
+                </a>
+                <a href="settings.php" class="nav-item active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                    <span class="nav-text">Settings</span>
+                </a>
+                <a href="logout.php" class="nav-item" style="margin-top: auto; color: #ef4444;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16,17 21,12 16,7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                    <span class="nav-text">Logout</span>
+                </a>
+            <?php endif; ?>
         </aside>
         
         <!-- Main Content -->
@@ -812,22 +655,6 @@ try {
                         </div>
                         <div class="user-info">
                             <h3><?php echo htmlspecialchars($user['fullname']); ?></h3>
-                            <div class="user-stats">
-                                <div class="stat-item">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                        <polyline points="7 10 12 15 17 10"/>
-                                        <line x1="12" y1="15" x2="12" y2="3"/>
-                                    </svg>
-                                    <?php echo $user['total_jobs']; ?> Jobs
-                                </div>
-                                <div class="stat-item">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                                    </svg>
-                                    <?php echo number_format($user['avg_rating'], 1); ?> Rating
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -837,8 +664,6 @@ try {
             <div class="settings-nav">
                 <button class="nav-tab active" data-tab="profile">Profile</button>
                 <button class="nav-tab" data-tab="security">Security</button>
-                <button class="nav-tab" data-tab="notifications">Notifications</button>
-                <button class="nav-tab" data-tab="account">Account</button>
             </div>
             
             <!-- Settings Content -->
@@ -918,81 +743,8 @@ try {
                         <button type="submit" class="btn btn-primary">Update Password</button>
                     </form>
                 </div>
-                
-                <!-- Notifications Section -->
-                <div class="settings-section" id="notifications">
-                    <h2 class="section-title">Notification Preferences</h2>
-                    <p class="section-description">Choose how you want to be notified about updates and activities.</p>
-                    
-                    <form method="POST" action="">
-                        <input type="hidden" name="action" value="update_preferences">
-                        
-                        <div class="checkbox-group">
-                            <label class="checkbox">
-                                <input type="checkbox" name="email_notifications" checked>
-                                <span class="checkmark"></span>
-                            </label>
-                            <span class="checkbox-label">Email Notifications</span>
-                        </div>
-                        
-                        <div class="checkbox-group">
-                            <label class="checkbox">
-                                <input type="checkbox" name="sms_notifications">
-                                <span class="checkmark"></span>
-                            </label>
-                            <span class="checkbox-label">SMS Notifications</span>
-                        </div>
-                        
-                        <div class="checkbox-group">
-                            <label class="checkbox">
-                                <input type="checkbox" name="push_notifications" checked>
-                                <span class="checkmark"></span>
-                            </label>
-                            <span class="checkbox-label">Push Notifications</span>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-primary">Save Preferences</button>
-                    </form>
-                </div>
-                
-                <!-- Account Section -->
-                <div class="settings-section" id="account">
-                    <h2 class="section-title">Account Management</h2>
-                    <p class="section-description">Manage your account settings and preferences.</p>
-                    
-                    <div class="danger-zone">
-                        <h3>Deactivate Account</h3>
-                        <p>Once you deactivate your account, you will no longer be able to access the platform. You can reactivate your account by contacting support.</p>
-                        
-                        <form method="POST" action="" id="deactivateForm">
-                            <input type="hidden" name="action" value="deactivate_account">
-                            
-                            <div class="form-group">
-                                <label class="form-label">Confirm Password</label>
-                                <input type="password" name="password_confirm" class="form-input" required>
-                            </div>
-                            
-                            <button type="submit" class="btn btn-danger">Deactivate Account</button>
-                        </form>
-                    </div>
-                </div>
             </div>
         </main>
-    </div>
-    
-    <!-- Modal -->
-    <div class="modal-overlay" id="deactivateModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Deactivate Account</h3>
-                <p>Are you sure you want to deactivate your account? This action cannot be undone.</p>
-            </div>
-            
-            <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                <button class="btn btn-danger" onclick="confirmDeactivate()">Deactivate</button>
-            </div>
-        </div>
     </div>
     
     <script>
@@ -1016,23 +768,6 @@ try {
                 document.getElementById(tab.dataset.tab).classList.add('active');
             });
         });
-        
-        // Deactivate account modal
-        const deactivateForm = document.getElementById('deactivateForm');
-        const deactivateModal = document.getElementById('deactivateModal');
-        
-        deactivateForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            deactivateModal.classList.add('active');
-        });
-        
-        function closeModal() {
-            deactivateModal.classList.remove('active');
-        }
-        
-        function confirmDeactivate() {
-            deactivateForm.submit();
-        }
     </script>
 </body>
 </html>
